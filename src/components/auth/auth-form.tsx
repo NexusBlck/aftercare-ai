@@ -10,19 +10,21 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LEGAL_VERSIONS } from "@/lib/legal";
 import { safeNext } from "@/lib/security/redirect";
-import { accountsConfigured, createBrowserSupabase } from "@/lib/supabase/browser";
+import { apiFetch, ClientError } from "@/lib/client/http";
+import { accountsConfigured } from "@/lib/supabase/browser";
 
 const Schema = z.object({
   email: z.email("Enter a valid email address."),
-  password: z.string().min(8, "Use at least 8 characters."),
+  password: z.string().min(8, "Use at least 8 characters.").max(72, "Use 72 characters or fewer."),
 });
 
 const REASONS: Record<string, string> = {
   expired: "Your session has expired. Please sign in again.",
   "signed-out": "You have been signed out.",
   unconfigured: "Accounts are not configured on this server. You can use the demo instead.",
+  "link-invalid": "That link is invalid, expired or has already been used. Please request a new one.",
+  "password-updated": "Your password was changed. Please sign in with your new password.",
 };
 
 /** Reads ?reason= in its own Suspense boundary so the form itself can be server-rendered. */
@@ -60,47 +62,35 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       return;
     }
     setErrors({});
-    const supabase = createBrowserSupabase();
-    if (!supabase) {
+    if (!accountsConfigured) {
       setErrors({ form: REASONS.unconfigured });
       return;
     }
     setBusy(true);
     try {
+      // Sign-in and sign-up run on the server, which sets HttpOnly session cookies; the browser
+      // never handles tokens.
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword(parsed.data);
-        if (error) {
-          setErrors({ form: error.message === "Invalid login credentials" ? "That email and password do not match an account." : error.message });
-          return;
-        }
+        await apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify(parsed.data) });
         router.replace(safeNext(new URLSearchParams(window.location.search).get("next"), window.location.origin));
         router.refresh();
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          ...parsed.data,
-          options: {
-            emailRedirectTo: `${window.location.origin}/onboarding`,
-            // Recorded server-side (with the server time) by a database trigger when the account is created.
-            data: {
-              legal: { terms: LEGAL_VERSIONS.terms, privacy: LEGAL_VERSIONS.privacy, health_data: LEGAL_VERSIONS.health_data },
-              age_confirmed: true,
-              marketing_opt_in: consent.marketing,
-            },
-          },
+        const res = await apiFetch<{ needsConfirmation: boolean }>("/api/auth/signup", {
+          method: "POST",
+          body: JSON.stringify({
+            ...parsed.data,
+            consents: { age: consent.age, terms: consent.terms, health_data: consent.health, marketing: consent.marketing },
+          }),
         });
-        if (error) {
-          setErrors({ form: error.message });
-          return;
-        }
-        if (data.session) {
+        if (res.needsConfirmation) {
+          setInfo("Check your email for a confirmation link. It signs you in and takes you to set-up.");
+        } else {
           router.replace("/onboarding");
           router.refresh();
-        } else {
-          setInfo("Check your email to confirm your account, then sign in.");
         }
       }
-    } catch {
-      setErrors({ form: "We could not reach the sign-in service. Check your connection and try again." });
+    } catch (err) {
+      setErrors({ form: err instanceof ClientError ? err.message : "We could not reach the sign-in service. Check your connection and try again." });
     } finally {
       setBusy(false);
     }
@@ -144,7 +134,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           )}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            {mode === "login" && (
+              <Link href="/forgot-password" className="text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+                Forgot password?
+              </Link>
+            )}
+          </div>
           <div className="relative">
             <Input
               id="password"

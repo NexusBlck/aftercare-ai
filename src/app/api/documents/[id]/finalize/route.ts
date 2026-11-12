@@ -2,12 +2,13 @@ import type { NextRequest } from "next/server";
 import { AppError } from "@/lib/api/errors";
 import { handle, ok } from "@/lib/api/route-utils";
 import { serverConfig } from "@/lib/config";
+import { securityEvent } from "@/lib/security/audit-log";
 import { checkFileContent } from "@/lib/security/file-validation";
 import { requireUser } from "@/lib/supabase/server";
 import { downloadOwnedFile, getOwnedDocument, removeStoredFile } from "@/services/document-service";
 
 /** Step 2 of an upload: verify the stored bytes. Files that are not genuine PDF/JPEG/PNG are deleted. */
-export const POST = handle(async (_req: NextRequest, ctx: RouteContext<"/api/documents/[id]/finalize">) => {
+export const POST = handle(async (req: NextRequest, ctx: RouteContext<"/api/documents/[id]/finalize">) => {
   const { id } = await ctx.params;
   const { supabase, user, bucket } = await requireUser();
   const doc = await getOwnedDocument(supabase, user.id, id);
@@ -16,6 +17,7 @@ export const POST = handle(async (_req: NextRequest, ctx: RouteContext<"/api/doc
   const bytes = await downloadOwnedFile(supabase, bucket, doc);
   const check = checkFileContent(bytes, serverConfig().maxUploadBytes);
   if (!check.ok || check.mime !== doc.mime_type) {
+    securityEvent("upload_rejected", req, { reason: check.ok ? "type_mismatch" : check.code });
     await removeStoredFile(supabase, bucket, doc.file_path);
     await supabase.from("documents").delete().eq("id", id).eq("user_id", user.id);
     throw new AppError(

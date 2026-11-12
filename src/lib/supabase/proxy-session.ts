@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { AUTH_COOKIE_OPTIONS } from "./cookie-options";
 
 /** Refreshes the Supabase session cookie on each request and returns the verified user, if any. */
 export async function updateSession(request: NextRequest): Promise<{ response: NextResponse; user: User | null }> {
@@ -10,6 +11,7 @@ export async function updateSession(request: NextRequest): Promise<{ response: N
   if (!url || !key) return { response, user: null };
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: AUTH_COOKIE_OPTIONS,
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (toSet) => {

@@ -1,0 +1,28 @@
+import "./zod-config";
+import { z } from "zod";
+
+export const EmailSchema = z
+  .string()
+  .trim()
+  .max(254)
+  .transform((s) => s.toLowerCase())
+  .pipe(z.email("Enter a valid email address."));
+
+/** 8-72 characters: Supabase hashes passwords with bcrypt, which ignores bytes beyond 72. */
+export const PasswordSchema = z.string().min(8, "Use at least 8 characters.").max(72, "Use 72 characters or fewer.");
+
+export const LoginSchema = z.object({ email: EmailSchema, password: z.string().min(1).max(72) });
+
+export const SignupSchema = z.object({
+  email: EmailSchema,
+  password: PasswordSchema,
+  consents: z.object({
+    age: z.literal(true),
+    terms: z.literal(true),
+    health_data: z.literal(true),
+    marketing: z.boolean(),
+  }),
+});
+
+export const ResetRequestSchema = z.object({ email: EmailSchema });
+export const NewPasswordSchema = z.object({ password: PasswordSchema });
