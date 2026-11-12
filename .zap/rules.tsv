@@ -1,0 +1,2 @@
+# ZAP baseline rule overrides: <rule id>	<IGNORE|INFO|WARN|FAIL>	<justification>
+# Every override must say why it is acceptable for this application.

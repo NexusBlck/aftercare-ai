@@ -61,7 +61,7 @@ export function DocumentPreviewDialog({
             {doc?.processing_status === "sample" ? " · Synthetic sample document (fictional patient)" : ""}
           </DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-muted/40">
+        <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-muted/40" tabIndex={0} role="region" aria-label="Document content">
           {error ? (
             <Alert variant="destructive" className="m-4 w-auto">
               <AlertDescription>{error}</AlertDescription>

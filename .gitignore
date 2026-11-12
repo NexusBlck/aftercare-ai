@@ -48,3 +48,6 @@ next-env.d.ts
 /playwright/.cache/
 
 .vercel
+
+# generated audit reports
+/qa/lighthouse/

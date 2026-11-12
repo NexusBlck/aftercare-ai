@@ -1,0 +1,100 @@
+name: CI
+
+# Runs on every push and pull request. No secrets are used: the app is built in demo mode and
+# E2E/Lighthouse/ZAP run against the deterministic TEST extractor, so no paid API is called.
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  quality:
+    name: Lint, types, unit/integration tests, E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Unit and integration tests (includes client-bundle secret scan)
+        run: npm test
+      - run: npx playwright install --with-deps chromium
+      - name: End-to-end, accessibility (axe) and security-header tests
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v7.0.2
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+
+  lighthouse:
+    name: Lighthouse
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Start production server
+        run: |
+          AFTERCARE_AI_PROVIDER=mock npx next start -p 3000 &
+          npx --yes wait-on@8.0.4 --timeout 60000 http://localhost:3000/api/health
+      - name: Audit (fails if accessibility < 95 or best practices / SEO < 90)
+        run: LH_ASSERT=1 npx tsx scripts/lighthouse.mts http://localhost:3000
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: qa/lighthouse/
+          retention-days: 14
+
+  zap:
+    name: OWASP ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Start production server
+        run: |
+          AFTERCARE_AI_PROVIDER=mock npx next start -p 3000 -H 0.0.0.0 &
+          npx --yes wait-on@8.0.4 --timeout 60000 http://localhost:3000/api/health
+      - name: ZAP baseline scan (passive)
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: http://localhost:3000
+          rules_file_name: .zap/rules.tsv
+          cmd_options: "-j"
+          allow_issue_writing: false
+          artifact_name: zap-report
+          fail_action: true

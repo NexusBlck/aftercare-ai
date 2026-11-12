@@ -111,3 +111,15 @@ describe("PDF export", () => {
     expect(toWinAnsi("درد")).toBe("???");
   });
 });
+
+describe("post-login redirect", () => {
+  it("allows same-origin paths and rejects open redirects", async () => {
+    const { safeNext } = await import("@/lib/security/redirect");
+    const origin = "https://aftercare.example";
+    expect(safeNext("/medications?x=1#top", origin)).toBe("/medications?x=1#top");
+    const bs = String.fromCharCode(92); // a literal backslash, which browsers treat like "/"
+    for (const evil of ["//evil.com", `/${bs}evil.com`, `/${bs}/evil.com`, "/	/evil.com", "https://evil.com", "javascript:alert(1)", "", null]) {
+      expect(safeNext(evil, origin), String(evil)).toBe("/dashboard");
+    }
+  });
+});

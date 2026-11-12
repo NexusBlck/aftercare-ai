@@ -1,5 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Logo } from "@/components/shared/logo";
 
 const POINTS = [
@@ -32,7 +32,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <Logo />
         </div>
         <div className="flex flex-1 items-center justify-center py-10">
-          <Suspense>{children}</Suspense>
+          {children}
         </div>
       </main>
     </div>

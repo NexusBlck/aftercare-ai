@@ -3,12 +3,13 @@
 import { Eye, EyeOff, FlaskConical, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeNext } from "@/lib/security/redirect";
 import { accountsConfigured, createBrowserSupabase } from "@/lib/supabase/browser";
 
 const Schema = z.object({
@@ -22,21 +23,25 @@ const REASONS: Record<string, string> = {
   unconfigured: "Accounts are not configured on this server. You can use the demo instead.",
 };
 
-/** Only allow same-site relative redirects after login. */
-function safeNext(next: string | null): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+/** Reads ?reason= in its own Suspense boundary so the form itself can be server-rendered. */
+function ReasonAlert() {
+  const reason = useSearchParams().get("reason");
+  if (!reason || !REASONS[reason]) return null;
+  return (
+    <Alert className="mt-6">
+      <AlertDescription>{REASONS[reason]}</AlertDescription>
+    </Alert>
+  );
 }
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
-  const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const reason = params.get("reason");
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -61,7 +66,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           setErrors({ form: error.message === "Invalid login credentials" ? "That email and password do not match an account." : error.message });
           return;
         }
-        router.replace(safeNext(params.get("next")));
+        router.replace(safeNext(new URLSearchParams(window.location.search).get("next"), window.location.origin));
         router.refresh();
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -93,11 +98,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {mode === "login" ? "Sign in to see your recovery plan." : "Your documents stay private to your account."}
       </p>
 
-      {reason && REASONS[reason] && (
-        <Alert className="mt-6">
-          <AlertDescription>{REASONS[reason]}</AlertDescription>
-        </Alert>
-      )}
+      <Suspense>
+        <ReasonAlert />
+      </Suspense>
       {!accountsConfigured && (
         <Alert className="mt-6 border-amber/30 bg-amber-soft">
           <AlertDescription>

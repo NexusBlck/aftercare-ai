@@ -94,7 +94,7 @@ export function ReviewActions({
           variant="outline"
           onClick={() => setStatus("needs_clinician_clarification", "Added to your questions for the care team")}
           disabled={busy}
-          aria-label={`Ask my clinician about ${itemLabel}`}
+          aria-label={`Ask clinician about ${itemLabel}`}
         >
           <CircleHelp aria-hidden />
           Ask clinician
