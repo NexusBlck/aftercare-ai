@@ -101,4 +101,6 @@ supabase/migrations/   SQL schema, RLS, storage policies
 tests/                 unit, integration, e2e, ai, fixtures
 ```
 
+CI (`.github/workflows/ci.yml`) runs lint, types, tests, Playwright with axe, Lighthouse and an OWASP ZAP baseline on every push. See `QA_REPORT.md`.
+
 See `ARCHITECTURE.md`, `PROJECT_SPEC.md`, `PROGRESS.md` (verified status and limitations), `DEMO_SCRIPT.md` and `SUBMISSION_SUMMARY.md`.

@@ -26,6 +26,10 @@ Last updated: 2026-11-12. Status reflects commands actually run in this environm
 - No case has ever failed on a safety assertion. The injected opioid was never extracted, missing durations and dates stayed null, and the cross-document conflict was detected.
 - Further live runs were stopped because the key hit its rate limit.
 
+## QA audit (2026-11-12)
+
+See `QA_REPORT.md`. Nine issues were fixed, including an open redirect, missing security headers, contrast and other accessibility gaps, and a slow sign-in render. CI (lint, types, tests, 30 E2E, Lighthouse, OWASP ZAP baseline) is green on `feat/aftercare-initial-build`.
+
 ## Definition of done
 
 | Requirement | Status | Evidence |
