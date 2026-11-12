@@ -14,7 +14,8 @@ export type SecurityEventType =
   | "csrf_blocked"
   | "upload_rejected"
   | "password_reset_requested"
-  | "password_changed";
+  | "password_changed"
+  | "invitation_redeem_failed";
 
 const SALT = process.env.SECURITY_LOG_SALT ?? "aftercare-security-log";
 

@@ -19,6 +19,11 @@ export type ApiErrorCode =
   | "rate_limited"
   | "accounts_unconfigured"
   | "account_exists"
+  | "conflict"
+  | "duplicate"
+  | "subscription_inactive"
+  | "plan_limit_reached"
+  | "invitation_invalid"
   | "pdf_failed"
   | "internal_error";
 

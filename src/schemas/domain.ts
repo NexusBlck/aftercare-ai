@@ -119,7 +119,7 @@ export const ReviewFlagSchema = z.object({
   description: z.string(),
   related_ids: z.array(z.string()),
   excerpts: z.array(z.string()),
-  origin: z.enum(["ai", "rule", "sample"]),
+  origin: z.enum(["ai", "rule", "sample", "clinician"]),
   /** Set for flags recomputed by detectConflicts(); they are replaced when the rule no longer applies. */
   rule_key: z.string().nullable(),
   status: z.enum(["open", "discussed_with_care_team"]),
@@ -141,7 +141,7 @@ export const CorrectionSchema = z.object({
   previous_value: z.string().nullable(),
   new_value: z.string().nullable(),
   note: z.string().nullable(),
-  source: z.literal("patient"),
+  source: z.enum(["patient", "clinician"]),
   created_at: z.string(),
 });
 export type Correction = z.infer<typeof CorrectionSchema>;
