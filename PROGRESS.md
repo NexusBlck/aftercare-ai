@@ -26,6 +26,16 @@ Last updated: 2026-11-12. Status reflects commands actually run in this environm
 - No case has ever failed on a safety assertion. The injected opioid was never extracted, missing durations and dates stayed null, and the cross-document conflict was detected.
 - Further live runs were stopped because the key hit its rate limit.
 
+## Supabase connected (2026-11-12)
+
+The free Supabase project `aftercare-ai` was created, and `0001_init.sql` was applied and verified: 10/10 tables have RLS, there are 13 table policies and 3 storage policies, and the bucket is private. The Site URL and redirect are set to the live domain. `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable key) were added to Vercel production and the site redeployed. Verified live:
+- `/api/health` reports `accounts: true`;
+- unauthenticated account APIs return 401;
+- anonymous REST and storage reads return nothing;
+- the sign-up form is enabled.
+
+**Not yet verified:** a full signed-in journey and the cross-user RLS test. Both need real test accounts, which the owner must create. The service-role key is not configured, so "delete my account" erases data but keeps the empty login.
+
 ## QA audit (2026-11-12)
 
 See `QA_REPORT.md`. Nine issues were fixed, including an open redirect, missing security headers, contrast and other accessibility gaps, and a slow sign-in render. CI (lint, types, tests, 30 E2E, Lighthouse, OWASP ZAP baseline) is green on `feat/aftercare-initial-build`.

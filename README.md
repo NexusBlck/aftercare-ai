@@ -81,7 +81,7 @@ The live RLS isolation test (`tests/integration/rls.test.ts`) runs only when `SU
 3. `POST /api/documents/[id]/process` declares `maxDuration = 300`, which needs a plan that allows long functions. On the Hobby plan (60 s), set `GEMINI_TIMEOUT_MS=45000`.
 4. In account mode, files upload straight to Supabase Storage through signed URLs, so Vercel's request-body limit doesn't apply. The demo-only `/api/extract` endpoint does receive the file, so on Vercel it is limited to about 4.5 MB.
 
-**Live demo:** https://aftercare-ai-pi.vercel.app (Vercel project `aftercare-ai`). It runs demo mode only: no Gemini key or Supabase project is configured, so uploads show "AI processing is not configured". Redeploy with `npx vercel deploy --prod` (use `npx.cmd` in PowerShell).
+**Live site:** https://aftercare-ai-pi.vercel.app (Vercel project `aftercare-ai`). Accounts are live on the free Supabase project `aftercare-ai` (region ap-south-1): migration applied, RLS on all tables, private storage bucket, email confirmation required. AI processing is off because no Gemini key is configured, so uploads show "AI processing is not configured". Redeploy with `npx vercel deploy --prod` (use `npx.cmd` in PowerShell).
 
 ## Project structure
 
