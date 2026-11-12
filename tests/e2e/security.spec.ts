@@ -87,7 +87,9 @@ test("server-side validation rejects malformed and out-of-range input", async ({
     ["/api/auth/reset", { email: "<script>alert(1)</script>" }],
   ] as const;
   for (const [url, data] of bad) {
-    const res = await request.post(url, { data, headers: { "X-Forwarded-For": "203.0.113.78" } });
+    // A fresh client address per request keeps the per-IP sign-up limit (5/hour) out of this test.
+    const ip = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+    const res = await request.post(url, { data, headers: { "X-Forwarded-For": ip } });
     expect(res.status(), `${url} ${JSON.stringify(data).slice(0, 60)}`).toBe(400);
     const body = await res.json();
     expect(body.error.code).toBe("invalid_request");
