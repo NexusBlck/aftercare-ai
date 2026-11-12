@@ -1,6 +1,16 @@
 # Security Audit — Strix
 
-**Status: incomplete. Strix has not yet completed a scan, so no Strix findings exist to confirm or fix.**
+**Status: blocked on cost (owner decision, 2026-11-12).** Strix has not completed a scan, so no Strix findings exist to confirm or fix.
+
+Strix needs a paid LLM: the only available key is a free-tier Gemini key limited to 20 requests per day, and a scan needs hundreds. The owner has decided not to incur any cost, so Strix scanning is paused. No vulnerabilities have been claimed, dismissed or fixed on the basis of Strix. The setup below is kept so a scan can run later if paid model access becomes available.
+
+**Security testing that has been done instead** (free tools, see `QA_REPORT.md`):
+- OWASP ZAP baseline: 0 failures, 0 warnings, 63 passed.
+- Playwright security-header and API-safety tests, and a client-bundle secret scan.
+- Unit tests for upload validation, storage paths and the open-redirect fix.
+- Static checks on the RLS policies in the migration.
+
+These are not a substitute for an agentic penetration test.
 
 ## Setup
 
@@ -33,8 +43,9 @@ For context, separate from Strix: the earlier QA audit (`QA_REPORT.md`) found an
 
 ## Remaining risks and next steps
 
-1. **A completed Strix scan is still needed.** The free-tier Gemini key can't support an agentic pentest. Options, all needing the owner's decision:
-   - enable billing on the key's Google Cloud project;
-   - use a different provider key, such as Strix's recommended `openrouter/z-ai/glm-5.3`;
+1. **No Strix scan has completed** (paused at the owner's request, to avoid any cost). To resume later, either:
+   - put a key with paid or sufficient quota in the `LLM_API_KEY` secret (and update `STRIX_LLM` if it isn't Gemini), then push a commit containing `[run-strix]` to `security-fixes`; or
    - use Strix Cloud.
+
+   Each run is capped by `--max-budget 5`.
 2. **Supabase auth and RLS can only be reviewed from source.** The deployed demo has no Supabase project or Gemini key configured, so Strix can't test account isolation, storage access or live prompt injection against the running site. Doing that would need a disposable Supabase test project with synthetic test users.
