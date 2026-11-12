@@ -162,7 +162,7 @@ export class LocalBackend implements PlanBackend {
 
       const explainable = collectExplainable(working, documentId);
       const provider = (result as unknown as { provider: string }).provider;
-      if (explainable.length && provider === "gemini") {
+      if (explainable.length && provider !== "mock") {
         onStage("explaining");
         try {
           const res = await apiFetch<{ explanations: unknown }>("/api/explain", {

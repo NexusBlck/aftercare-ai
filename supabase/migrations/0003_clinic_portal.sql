@@ -40,6 +40,10 @@ begin
 end $$;
 revoke all on function public.handle_new_user_consent() from public, anon, authenticated;
 
+-- ============================================================== AI providers: allow the FreeLLMAPI router
+alter table public.extraction_runs drop constraint if exists extraction_runs_provider_check;
+alter table public.extraction_runs add constraint extraction_runs_provider_check check (provider in ('gemini', 'mock', 'freellmapi'));
+
 -- ============================================================== organizations & membership
 
 create table public.organizations (

@@ -145,7 +145,15 @@ export default function SettingsPage() {
             {server && (
               <li className="flex gap-2">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-teal" aria-hidden />
-                AI processing: {server.ai === "gemini" ? `Google Gemini (${server.model})` : server.ai === "mock" ? "deterministic test extractor (not AI)" : "not configured"}.
+                AI processing:{" "}
+                {server.ai === "gemini"
+                  ? `Google Gemini (${server.model})`
+                  : server.ai === "freellmapi"
+                    ? "free-tier AI models chosen per request by FreeLLMAPI (see the Privacy policy)"
+                    : server.ai === "mock"
+                      ? "deterministic test extractor (not AI)"
+                      : "not configured"}
+                .
               </li>
             )}
           </ul>
