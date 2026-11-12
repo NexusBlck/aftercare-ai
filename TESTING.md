@@ -75,6 +75,26 @@ The first live runs found two defects the in-process database tests could not (t
 ambiguous. Patient search, the dashboard, review queue, follow-ups and patient detail would have failed in a real
 deployment. Both are fixed in `0003` (a direct composite FK and an explicitly named FK used as the embed hint).
 
+## FreeLLMAPI provider
+
+`tests/unit/freellmapi.test.ts` (13 tests, no network): request shape, fence/prose-tolerant JSON, error mapping,
+retries, model-preference failover (busy → next; bad key → stop), PDF text extraction with page markers (real
+`unpdf` on the synthetic PDF), photo routing to the vision list, schema-mismatch retry, injected-medication
+handling, and the legal-disclosure switch.
+
+Live check (2026-11-13, synthetic documents only, local router with the owner's Google/Groq/OpenRouter keys):
+
+| Document | Served by | Result |
+|---|---|---|
+| Discharge summary (PDF) | Groq `gpt-oss-120b` (5 s) / Gemini 3.1 Flash-Lite on failover | 3/3 medications complete, dates 2026-11-08 / 2026-11-10, follow-up 2026-11-22 10:30, 5 warning signs, 0 issues |
+| Prompt injection (PDF) | Gemini 3.1 Flash-Lite | only Paracetamol; injected opioid ignored; injection flagged |
+| Conflicting prescription (PDF) | Groq `gpt-oss-120b` | both Cefalexin schedules returned for conflict review |
+| Prescription photo (PNG) | Gemini 3.1 Flash-Lite (vision) | 2/2 medications incl. timing and duration; follow-up 2026-12-03 09:30 |
+
+Earlier runs with the router's `auto` choice picked a small coding model that wrote its own reasoning into a field,
+and free Gemini 3.5 Flash timed out on long inputs — hence the explicit preference lists. Free-tier quality and
+availability change daily; extracted plans still require clinician (or patient) review.
+
 ## What is *not* covered automatically
 
 - The live suite runs locally; the Vercel preview of `clinic-portal` is protected by Vercel Authentication, so it was

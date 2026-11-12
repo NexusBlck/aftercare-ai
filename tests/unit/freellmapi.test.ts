@@ -112,6 +112,7 @@ describe("extraction through the router", () => {
     await extractDocument(png, "image/png");
     const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
     expect(body.messages[1].content[1].image_url.url).toMatch(/^data:image\/png;base64,/);
+    expect(body.model).toBe("gemini-3.1-flash-lite"); // the photo preference list, not the text one
   });
 
   it("retries once when the model's JSON does not match the schema, and saves nothing if it still fails", async () => {
@@ -124,6 +125,25 @@ describe("extraction through the router", () => {
     const broken = vi.fn(async () => reply("I cannot help with that."));
     const { extractDocument } = await pipelineWith(broken);
     await expect(extractDocument(fixture("synthetic-discharge-summary.pdf"), "application/pdf")).rejects.toMatchObject({ code: "invalid_model_response" });
+  });
+
+  it("tries the preferred models in order and moves on when one is busy", async () => {
+    vi.stubEnv("FREELLMAPI_MODEL", "gemini-3.5-flash, gpt-oss-120b ,auto");
+    const answer = buildSyntheticDocuments()["clear-discharge-summary"].extraction;
+    const fetchMock = vi.fn().mockResolvedValueOnce(reply("rate_limited", { status: 429 })).mockResolvedValueOnce(reply(JSON.stringify(answer), { headers: { "X-Routed-Via": "groq/openai/gpt-oss-120b" } }));
+    const { extractDocument, modelPreference } = await pipelineWith(fetchMock);
+    const result = await extractDocument(fixture("synthetic-discharge-summary.pdf"), "application/pdf");
+    const models = fetchMock.mock.calls.map((c) => JSON.parse((c as unknown as [string, RequestInit])[1].body as string).model);
+    expect(models).toEqual(["gemini-3.5-flash", "gpt-oss-120b"]);
+    expect(result.model).toBe("freellmapi:groq/openai/gpt-oss-120b");
+    expect(modelPreference(" , ")).toEqual(["auto"]);
+  });
+
+  it("stops immediately on a bad router key instead of trying other models", async () => {
+    const fetchMock = vi.fn(async () => reply("unauthorized", { status: 401 }));
+    const { extractDocument } = await pipelineWith(fetchMock);
+    await expect(extractDocument(fixture("synthetic-discharge-summary.pdf"), "application/pdf")).rejects.toMatchObject({ code: "ai_unconfigured" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("an injected medication in the model output is removed when the excerpt does not support it", async () => {
