@@ -22,7 +22,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { usePlan } from "@/hooks/use-plan";
 import { planOverview } from "@/lib/domain/summary";
 import { exitDemo } from "@/lib/client/demo";
-import { createBrowserSupabase } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -43,7 +42,8 @@ export function useSignOut() {
       exitDemo();
       return;
     }
-    await createBrowserSupabase()?.auth.signOut();
+    // Server-side sign-out clears the HttpOnly session cookies.
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined);
     router.replace("/login?reason=signed-out");
     router.refresh();
   };

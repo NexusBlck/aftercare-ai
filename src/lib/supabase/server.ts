@@ -4,6 +4,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { AppError } from "@/lib/api/errors";
 import { serverConfig } from "@/lib/config";
+import { AUTH_COOKIE_OPTIONS } from "./cookie-options";
 
 /** Supabase client bound to the signed-in user's session. All queries run under RLS. */
 export async function createServerSupabase(): Promise<SupabaseClient | null> {
@@ -11,6 +12,7 @@ export async function createServerSupabase(): Promise<SupabaseClient | null> {
   if (!cfg) return null;
   const cookieStore = await cookies();
   return createServerClient(cfg.url, cfg.anonKey, {
+    cookieOptions: AUTH_COOKIE_OPTIONS,
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (toSet) => {

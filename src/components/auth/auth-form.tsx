@@ -10,19 +10,21 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LEGAL_VERSIONS } from "@/lib/legal";
 import { safeNext } from "@/lib/security/redirect";
-import { accountsConfigured, createBrowserSupabase } from "@/lib/supabase/browser";
+import { apiFetch, ClientError } from "@/lib/client/http";
+import { accountsConfigured } from "@/lib/supabase/browser";
 
 const Schema = z.object({
   email: z.email("Enter a valid email address."),
-  password: z.string().min(8, "Use at least 8 characters."),
+  password: z.string().min(8, "Use at least 8 characters.").max(72, "Use 72 characters or fewer."),
 });
 
 const REASONS: Record<string, string> = {
   expired: "Your session has expired. Please sign in again.",
   "signed-out": "You have been signed out.",
   unconfigured: "Accounts are not configured on this server. You can use the demo instead.",
+  "link-invalid": "That link is invalid, expired or has already been used. Please request a new one.",
+  "password-updated": "Your password was changed. Please sign in with your new password.",
 };
 
 /** Reads ?reason= in its own Suspense boundary so the form itself can be server-rendered. */
@@ -41,8 +43,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; consent?: string; form?: string }>({});
-  const [consent, setConsent] = useState({ age: false, terms: false, health: false, marketing: false });
+  const [errors, setErrors] = useState<{ email?: string; password?: string; consent?: string; form?: string; exists?: boolean }>({});
+  const [consent, setConsent] = useState({ accepted: false, marketing: false });
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -55,52 +57,43 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       setErrors({ email: fieldErrors.email?.[0], password: fieldErrors.password?.[0] });
       return;
     }
-    if (mode === "signup" && !(consent.age && consent.terms && consent.health)) {
-      setErrors({ consent: "Please tick the three required boxes to create an account." });
+    if (mode === "signup" && !consent.accepted) {
+      setErrors({ consent: "Please agree to the Terms of Service and Privacy Policy to create an account." });
       return;
     }
     setErrors({});
-    const supabase = createBrowserSupabase();
-    if (!supabase) {
+    if (!accountsConfigured) {
       setErrors({ form: REASONS.unconfigured });
       return;
     }
     setBusy(true);
     try {
+      // Sign-in and sign-up run on the server, which sets HttpOnly session cookies; the browser
+      // never handles tokens.
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword(parsed.data);
-        if (error) {
-          setErrors({ form: error.message === "Invalid login credentials" ? "That email and password do not match an account." : error.message });
-          return;
-        }
+        await apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify(parsed.data) });
         router.replace(safeNext(new URLSearchParams(window.location.search).get("next"), window.location.origin));
         router.refresh();
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          ...parsed.data,
-          options: {
-            emailRedirectTo: `${window.location.origin}/onboarding`,
-            // Recorded server-side (with the server time) by a database trigger when the account is created.
-            data: {
-              legal: { terms: LEGAL_VERSIONS.terms, privacy: LEGAL_VERSIONS.privacy, health_data: LEGAL_VERSIONS.health_data },
-              age_confirmed: true,
-              marketing_opt_in: consent.marketing,
-            },
-          },
+        const res = await apiFetch<{ needsConfirmation: boolean }>("/api/auth/signup", {
+          method: "POST",
+          body: JSON.stringify({
+            ...parsed.data,
+            consents: { accepted: consent.accepted, marketing: consent.marketing },
+          }),
         });
-        if (error) {
-          setErrors({ form: error.message });
-          return;
-        }
-        if (data.session) {
+        if (res.needsConfirmation) {
+          setInfo("Check your email for a confirmation link. It signs you in and takes you to set-up.");
+        } else {
           router.replace("/onboarding");
           router.refresh();
-        } else {
-          setInfo("Check your email to confirm your account, then sign in.");
         }
       }
-    } catch {
-      setErrors({ form: "We could not reach the sign-in service. Check your connection and try again." });
+    } catch (err) {
+      setErrors({
+        form: err instanceof ClientError ? err.message : "We could not reach the sign-in service. Check your connection and try again.",
+        exists: err instanceof ClientError && err.code === "account_exists",
+      });
     } finally {
       setBusy(false);
     }
@@ -144,7 +137,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           )}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            {mode === "login" && (
+              <Link href="/forgot-password" className="text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+                Forgot password?
+              </Link>
+            )}
+          </div>
           <div className="relative">
             <Input
               id="password"
@@ -175,27 +175,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           )}
         </div>
         {mode === "signup" && (
-          <fieldset className="grid gap-2.5" aria-describedby={errors.consent ? "consent-error" : undefined}>
-            <legend className="mb-1 text-sm font-medium">Your agreement</legend>
-            <ConsentBox id="consent-age" checked={consent.age} onChange={(v) => setConsent({ ...consent, age: v })} required>
-              I am 18 or older. If I add documents about someone else, I am their parent, guardian or otherwise authorised.
-            </ConsentBox>
-            <ConsentBox id="consent-terms" checked={consent.terms} onChange={(v) => setConsent({ ...consent, terms: v })} required>
+          <fieldset className="grid gap-3" aria-describedby={errors.consent ? "consent-error" : undefined}>
+            <legend className="sr-only">Agreements</legend>
+            <ConsentBox id="consent-terms" checked={consent.accepted} onChange={(v) => setConsent({ ...consent, accepted: v })} required>
               I agree to the{" "}
               <Link href="/terms" target="_blank" className="font-semibold underline underline-offset-2">
-                Terms of service
+                Terms of Service
               </Link>{" "}
               and{" "}
               <Link href="/privacy" target="_blank" className="font-semibold underline underline-offset-2">
-                Privacy policy
+                Privacy Policy
               </Link>
-              , and understand AFTERCARE AI is not medical advice.
-            </ConsentBox>
-            <ConsentBox id="consent-health" checked={consent.health} onChange={(v) => setConsent({ ...consent, health: v })} required>
-              I explicitly consent to AFTERCARE AI processing the health information in documents I upload, as described in the Privacy policy.
+              , including processing of my health information
             </ConsentBox>
             <ConsentBox id="consent-marketing" checked={consent.marketing} onChange={(v) => setConsent({ ...consent, marketing: v })}>
-              Optional: send me occasional product updates by email. I can unsubscribe any time in Settings.
+              Send me product updates and offers by email
             </ConsentBox>
             {errors.consent && (
               <p id="consent-error" className="text-sm text-danger" role="alert">
@@ -207,6 +201,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {errors.form && (
           <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
             {errors.form}
+            {errors.exists && (
+              <>
+                {" "}
+                <Link href="/login" className="font-semibold underline underline-offset-2">
+                  Sign in instead
+                </Link>
+              </>
+            )}
           </p>
         )}
         {info && (
@@ -265,7 +267,14 @@ function ConsentBox({
       />
       <label htmlFor={id} className="leading-snug">
         {children}
-        {required && <span className="sr-only"> (required)</span>}
+        {required && (
+          <>
+            <span aria-hidden className="ml-0.5 font-semibold text-danger">
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </>
+        )}
       </label>
     </div>
   );

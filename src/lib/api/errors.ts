@@ -18,6 +18,7 @@ export type ApiErrorCode =
   | "already_processing"
   | "rate_limited"
   | "accounts_unconfigured"
+  | "account_exists"
   | "pdf_failed"
   | "internal_error";
 

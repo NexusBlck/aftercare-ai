@@ -64,10 +64,7 @@ test("demo visitors must accept terms, privacy and health-data consent before us
   expect(await axe(page), "consent gate").toEqual([]);
   const agree = page.getByRole("button", { name: "Agree and continue" });
   await expect(agree).toBeDisabled();
-  await page.getByTestId("consent-terms").check();
-  await page.getByTestId("consent-privacy").check();
-  await expect(agree).toBeDisabled();
-  await page.getByTestId("consent-health_data").check();
+  await page.getByTestId("consent-agree").check();
   await agree.click();
   await expect(page.getByRole("button", { name: "Open the sample plan" })).toBeVisible();
   await page.getByRole("button", { name: "Open the sample plan" }).click();
@@ -100,13 +97,15 @@ test("declining the agreement leaves the app", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
 });
 
-test("sign-up form has separate required consents and an unticked marketing opt-in", async ({ page }) => {
+test("sign-up form has one required agreement (marked *) and an unticked, optional marketing box", async ({ page }) => {
   await page.goto("/signup");
-  await expect(page.getByLabel(/I am 18 or older/)).not.toBeChecked();
-  await expect(page.getByLabel(/I agree to the Terms of service and Privacy policy/)).toBeVisible();
-  await expect(page.getByLabel(/I explicitly consent to AFTERCARE AI processing the health information/)).toBeVisible();
-  const marketing = page.getByLabel(/Optional: send me occasional product updates/);
+  await expect(page.locator('input[type="checkbox"]')).toHaveCount(2);
+  const terms = page.getByLabel(/I agree to the Terms of Service and Privacy Policy/);
+  await expect(terms).not.toBeChecked();
+  await expect(page.locator("label[for=consent-terms] .text-danger")).toHaveText("*");
+  const marketing = page.getByLabel(/Send me product updates and offers by email/);
   await expect(marketing).not.toBeChecked();
+  await expect(page.locator("label[for=consent-marketing] .text-danger")).toHaveCount(0);
   expect(await axe(page), "signup").toEqual([]);
 });
 

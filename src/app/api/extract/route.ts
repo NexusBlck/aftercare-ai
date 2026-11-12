@@ -3,6 +3,7 @@ import { ndjsonStream } from "@/lib/api/ndjson";
 import { handle } from "@/lib/api/route-utils";
 import { serverConfig } from "@/lib/config";
 import { extractDocument, requireAi } from "@/lib/gemini/pipeline";
+import { securityEvent } from "@/lib/security/audit-log";
 import { checkFileContent } from "@/lib/security/file-validation";
 import { clientKey, rateLimit } from "@/lib/security/rate-limit";
 
@@ -32,7 +33,10 @@ export const POST = handle(async (request: Request) => {
   if (!file) throw new AppError("invalid_request", "No file was attached.", 400);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const check = checkFileContent(bytes, maxBytes);
-  if (!check.ok) throw new AppError(check.code, check.message, 400);
+  if (!check.ok) {
+    securityEvent("upload_rejected", request, { reason: check.code });
+    throw new AppError(check.code, check.message, 400);
+  }
 
   return ndjsonStream(async (emit) => {
     emit({ type: "stage", stage: "reading" });

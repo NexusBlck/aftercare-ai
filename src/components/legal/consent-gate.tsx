@@ -7,34 +7,8 @@ import { useSignOut } from "@/components/app/app-shell";
 import { Button } from "@/components/ui/button";
 import { usePlan } from "@/hooks/use-plan";
 import { ClientError } from "@/lib/client/http";
-import { LEGAL_VERSIONS, type LegalDocument } from "@/lib/legal";
+import { LEGAL_VERSIONS } from "@/lib/legal";
 import type { LegalStatus } from "@/schemas/legal";
-
-const LABELS: Record<LegalDocument, ReactNode> = {
-  terms: (
-    <>
-      I agree to the{" "}
-      <Link href="/terms" target="_blank" className="font-semibold underline underline-offset-2">
-        Terms of service
-      </Link>
-      , including that AFTERCARE AI is not medical advice.
-    </>
-  ),
-  privacy: (
-    <>
-      I have read the{" "}
-      <Link href="/privacy" target="_blank" className="font-semibold underline underline-offset-2">
-        Privacy policy
-      </Link>
-      .
-    </>
-  ),
-  health_data: (
-    <>
-      I explicitly consent to AFTERCARE AI processing the health information in documents I upload, as described in the Privacy policy. I can withdraw this by deleting my data.
-    </>
-  ),
-};
 
 /**
  * Blocks the app until the current versions of the terms, privacy policy and health-data consent
@@ -46,7 +20,7 @@ export function ConsentGate({ children }: { children: ReactNode }) {
   const signOut = useSignOut();
   const [status, setStatus] = useState<LegalStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [checked, setChecked] = useState<Partial<Record<LegalDocument, boolean>>>({});
+  const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
@@ -68,7 +42,6 @@ export function ConsentGate({ children }: { children: ReactNode }) {
   if (status && status.needs.length === 0) return <>{children}</>;
 
   const needs = status?.needs ?? [];
-  const allChecked = needs.every((d) => checked[d]);
   const updated = status ? status.accepted.length > 0 : false;
 
   const accept = async () => {
@@ -104,29 +77,37 @@ export function ConsentGate({ children }: { children: ReactNode }) {
             </button>
           </div>
         ) : (
-          <fieldset className="mt-5 space-y-3">
-            <legend className="sr-only">Agreements</legend>
-            {needs.map((doc) => (
-              <label key={doc} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 size-4 shrink-0 accent-[var(--teal)]"
-                  checked={!!checked[doc]}
-                  onChange={(e) => setChecked({ ...checked, [doc]: e.target.checked })}
-                  data-testid={`consent-${doc}`}
-                />
-                <span>
-                  {LABELS[doc]} <span className="text-xs text-muted-foreground">(version {LEGAL_VERSIONS[doc]})</span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 shrink-0 accent-[var(--teal)]"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              data-testid="consent-agree"
+            />
+            <span>
+              I agree to the{" "}
+              <Link href="/terms" target="_blank" className="font-semibold underline underline-offset-2">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" target="_blank" className="font-semibold underline underline-offset-2">
+                Privacy Policy
+              </Link>
+              , including processing of my health information
+              <span aria-hidden className="ml-0.5 font-semibold text-danger">
+                *
+              </span>
+              <span className="sr-only"> (required)</span>
+              <span className="mt-1 block text-xs text-muted-foreground">Version {LEGAL_VERSIONS.terms}</span>
+            </span>
+          </label>
         )}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
           <Button variant="ghost" onClick={signOut}>
             No thanks, leave
           </Button>
-          <Button onClick={accept} disabled={!allChecked || saving || !!error || needs.length === 0}>
+          <Button onClick={accept} disabled={!agreed || saving || !!error || needs.length === 0}>
             {saving && <Loader2 className="animate-spin" aria-hidden />}
             Agree and continue
           </Button>
