@@ -1,0 +1,60 @@
+name: Strix security scan
+
+# Runs ONLY on the security-fixes branch for commits whose message contains [run-strix], or manually.
+# Findings are never printed to the (public) log: results are encrypted with RESULTS_KEY before upload.
+on:
+  push:
+    branches: [security-fixes]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: strix
+  cancel-in-progress: false
+
+jobs:
+  strix:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-strix]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      STRIX_LLM: gemini/gemini-3.5-flash
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.LLM_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install Strix (official package)
+        run: pip install --quiet strix-agent==1.7.0
+      - name: Run Strix (output kept private)
+        run: |
+          mkdir -p private
+          set +e
+          strix -n \
+            --target ./ \
+            --target https://aftercare-ai-pi.vercel.app \
+            --instruction-file .strix/instructions.md \
+            --scan-mode standard \
+            --scope-mode full \
+            --max-budget 5 \
+            > private/strix-console.log 2>&1
+          echo "strix exit code: $?"
+          set -e
+      - name: Encrypt results
+        if: always()
+        env:
+          RESULTS_KEY: ${{ secrets.RESULTS_KEY }}
+        run: |
+          tar czf results.tgz private strix_runs 2>/dev/null || tar czf results.tgz private
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in results.tgz -out results.tgz.enc -pass env:RESULTS_KEY
+          rm -rf results.tgz private strix_runs
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: strix-results-encrypted
+          path: results.tgz.enc
+          retention-days: 7

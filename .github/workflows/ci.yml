@@ -4,7 +4,7 @@ name: CI
 # E2E/Lighthouse/ZAP run against the deterministic TEST extractor, so no paid API is called.
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", security-fixes]
   pull_request:
   workflow_dispatch:
 
