@@ -25,7 +25,7 @@
 
 | # | Item | Status | Notes |
 | --- | --- | --- | --- |
-| 1 | Proper authentication | ✅ | Supabase Auth with email confirmation required, server-side login (F1), 8–72 character passwords (F2), rate limits (F7), no account enumeration in login, sign-up or reset replies, and secure email and password change. |
+| 1 | Proper authentication | ✅ | Supabase Auth with server-side login (F1). **Email confirmation was switched off at the owner's request (2026-11-12) for instant sign-up**, because the free Supabase email sender was unreliable. Trade-off: someone can register with an email address they don't own. Re-enable it once a custom email provider (SMTP) is set up. Also: 8–72 character passwords (F2), rate limits (F7), no account enumeration in login, sign-up or reset replies, and secure email and password change. |
 | 2 | API keys server-only | ✅ | Gemini and service-role keys are read only in server modules (`server-only`). The browser receives only the Supabase **publishable** key, which is designed to be public and protected by RLS. Checked on every build by the bundle secret-scan test. |
 | 3 | Owner-only database access | ✅ | RLS is on all 11 tables (verified live). Policies require `user_id = auth.uid()`, and child rows also check that the parent plan and document belong to the same user. Storage is a private bucket scoped to the user's folder. Anonymous REST and storage requests return nothing (verified live). |
 | 4 | HTTPS enforced | ✅ | Vercel 308-redirects HTTP to HTTPS (verified live). HSTS is set for 2 years with subdomains, plus `upgrade-insecure-requests` in the CSP. Supabase is HTTPS-only. |
