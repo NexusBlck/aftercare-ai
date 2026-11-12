@@ -35,6 +35,11 @@ export const POST = handle(async (request: Request) => {
   if (error) {
     if (error.status === 429) throw new AppError("rate_limited", "Too many sign-ups right now. Please try again later.", 429, true);
     if (/password/i.test(error.message)) throw new AppError("invalid_request", error.message, 400);
+    // With email confirmation off, Supabase itself reports existing addresses, so saying so here
+    // reveals nothing new and lets the person sign in instead.
+    if (error.code === "user_already_exists") {
+      throw new AppError("account_exists", "An account with this email already exists.", 409);
+    }
     throw new AppError("invalid_request", "We could not create the account. Please check your details and try again.", 400);
   }
   // A brand-new account has an identity. Supabase returns none for an already-registered address

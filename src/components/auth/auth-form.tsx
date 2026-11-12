@@ -43,7 +43,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; consent?: string; form?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; consent?: string; form?: string; exists?: boolean }>({});
   const [consent, setConsent] = useState({ accepted: false, marketing: false });
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -90,7 +90,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         }
       }
     } catch (err) {
-      setErrors({ form: err instanceof ClientError ? err.message : "We could not reach the sign-in service. Check your connection and try again." });
+      setErrors({
+        form: err instanceof ClientError ? err.message : "We could not reach the sign-in service. Check your connection and try again.",
+        exists: err instanceof ClientError && err.code === "account_exists",
+      });
     } finally {
       setBusy(false);
     }
@@ -198,6 +201,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {errors.form && (
           <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
             {errors.form}
+            {errors.exists && (
+              <>
+                {" "}
+                <Link href="/login" className="font-semibold underline underline-offset-2">
+                  Sign in instead
+                </Link>
+              </>
+            )}
           </p>
         )}
         {info && (
