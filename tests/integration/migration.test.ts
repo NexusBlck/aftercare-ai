@@ -1,9 +1,14 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /** Static checks on the migration so RLS cannot silently regress. Live checks are in rls.test.ts. */
-const sql = readFileSync(join(process.cwd(), "supabase", "migrations", "0001_init.sql"), "utf8");
+const dir = join(process.cwd(), "supabase", "migrations");
+const sql = readdirSync(dir)
+  .filter((f) => f.endsWith(".sql"))
+  .sort()
+  .map((f) => readFileSync(join(dir, f), "utf8"))
+  .join("\n");
 const tables = [...sql.matchAll(/create table public\.(\w+)/g)].map((m) => m[1]);
 
 describe("database migration", () => {
@@ -39,6 +44,20 @@ describe("database migration", () => {
       expect(sql).toContain(col);
     }
     expect(sql).toContain("scheduled_time time");
+  });
+
+  it("records legal acceptances with a server timestamp and never lets users edit them", () => {
+    expect(tables).toContain("legal_acceptances");
+    expect(sql).toContain("new.accepted_at = now()");
+    expect(sql).not.toMatch(/create policy \w+ on public\.legal_acceptances for (update|all)/);
+    expect(sql).toContain("after insert on auth.users");
+  });
+
+  it("schedules retention clean-up and keeps marketing consent separate", () => {
+    expect(sql).toContain("interval '90 days'");
+    expect(sql).toContain("interval '24 hours'");
+    expect(sql).toContain("cron.schedule('aftercare-retention'");
+    expect(sql).toMatch(/marketing_opt_in boolean not null default false/);
   });
 
   it("makes corrections append-only", () => {

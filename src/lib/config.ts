@@ -18,6 +18,8 @@ const EnvSchema = z.object({
   GEMINI_THINKING_LEVEL: z.enum(["minimal", "low", "medium", "high"]).default("low"),
   MAX_UPLOAD_MB: z.coerce.number().min(1).max(50).default(10),
   AFTERCARE_AI_PROVIDER: z.enum(["gemini", "mock", ""]).optional(),
+  /** Must be "true": confirms the key is on Gemini's paid tier, where content is not used for training. */
+  GEMINI_PAID_TIER: z.string().optional(),
 });
 
 export type ServerConfig = {
@@ -56,7 +58,9 @@ export function serverConfig(): ServerConfig {
   let ai: ServerConfig["ai"] = null;
   if (env.AFTERCARE_AI_PROVIDER === "mock") {
     ai = { provider: "mock", model: "aftercare-test-extractor", timeoutMs: env.GEMINI_TIMEOUT_MS };
-  } else if (env.GEMINI_API_KEY) {
+  } else if (env.GEMINI_API_KEY && env.GEMINI_PAID_TIER === "true") {
+    // Google may use content sent through the *unpaid* Gemini API to improve its products, so
+    // patient documents are only ever processed when the operator confirms a paid-tier key.
     ai = {
       provider: "gemini",
       apiKey: env.GEMINI_API_KEY,

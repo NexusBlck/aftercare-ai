@@ -12,6 +12,8 @@ import type { DocumentRecord, PlanBundle } from "@/schemas/domain";
  * These call a real model, so they check safety properties rather than exact wording.
  */
 const live = !!process.env.GEMINI_API_KEY;
+// Synthetic fixtures only (no user data), so the paid-tier guard does not apply to this evaluation.
+if (live) process.env.GEMINI_PAID_TIER ??= "true";
 const file = (name: string) => new Uint8Array(readFileSync(join(process.cwd(), "tests", "fixtures", "documents", name)));
 
 async function run(name: string) {

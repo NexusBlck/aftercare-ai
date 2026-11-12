@@ -51,3 +51,6 @@ next-env.d.ts
 
 # generated audit reports
 /qa/lighthouse/
+
+# generated e2e browser state
+/tests/e2e/.auth/

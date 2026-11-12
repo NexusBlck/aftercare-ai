@@ -32,7 +32,7 @@ export function requireAi() {
   if (!ai) {
     throw new AppError(
       "ai_unconfigured",
-      "AI document processing is not configured on this server (GEMINI_API_KEY is missing). You can explore the labelled sample plan in demo mode instead.",
+      "AI document processing is not configured on this server. You can explore the labelled sample plan in demo mode instead.",
       503,
     );
   }

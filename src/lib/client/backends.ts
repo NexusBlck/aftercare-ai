@@ -10,6 +10,8 @@ import { buildSamplePlan } from "@/lib/demo/sample-plan";
 import { checkFileClaims, checkFileContent, maxUploadBytes, safeDisplayName } from "@/lib/security/file-validation";
 import type { DocumentRecord, ItemPatch, PlanBundle, Profile } from "@/schemas/domain";
 import { ExplanationSchema, ExtractionSchema, type DocumentType } from "@/schemas/extraction";
+import { LEGAL_DOCUMENTS, LEGAL_VERSIONS, type LegalDocument } from "@/lib/legal";
+import type { LegalStatus } from "@/schemas/legal";
 import { apiBlob, apiFetch, ClientError, readProcessStream, xhrUpload } from "./http";
 import {
   clearLocalFiles,
@@ -47,6 +49,11 @@ export interface PlanBackend {
   patchItem(bundle: PlanBundle, kind: ItemKind, id: string, patch: ItemPatch): Promise<PlanBundle>;
   exportPdf(bundle: PlanBundle): Promise<Blob>;
   deleteAllData(): Promise<{ accountDeleted: boolean }>;
+  legalStatus(): Promise<LegalStatus>;
+  acceptLegal(documents: LegalDocument[]): Promise<LegalStatus>;
+  setMarketing(optIn: boolean): Promise<LegalStatus>;
+  /** Everything held about the user, as a downloadable JSON file. */
+  exportData(): Promise<Blob>;
 }
 
 async function pdfInBrowser(bundle: PlanBundle): Promise<Blob> {
@@ -214,9 +221,73 @@ export class LocalBackend implements PlanBackend {
   async deleteAllData() {
     writeLocalPlan(null);
     writeLocalProfile({ display_name: null, preferred_language: "en", onboarded: false });
+    writeLocalLegal([]);
     await clearLocalFiles();
     return { accountDeleted: false };
   }
+
+  async legalStatus(): Promise<LegalStatus> {
+    return localLegalStatus(readLocalLegal());
+  }
+
+  async acceptLegal(documents: LegalDocument[]): Promise<LegalStatus> {
+    const now = new Date().toISOString();
+    const current = readLocalLegal();
+    const added = documents
+      .filter((d) => !current.some((a) => a.document === d && a.version === LEGAL_VERSIONS[d]))
+      .map((document) => ({ document, version: LEGAL_VERSIONS[document], accepted_at: now, source: "in_app" }));
+    const next = [...added, ...current];
+    writeLocalLegal(next);
+    return localLegalStatus(next);
+  }
+
+  async setMarketing(): Promise<LegalStatus> {
+    // Demo mode has no email address, so there is nothing to opt in to.
+    return localLegalStatus(readLocalLegal());
+  }
+
+  async exportData(): Promise<Blob> {
+    const payload = {
+      export_format: "aftercare-ai-data-export/1",
+      generated_at: new Date().toISOString(),
+      mode: "demo (stored only in this browser)",
+      profile: readLocalProfile(),
+      agreements: { current_versions: LEGAL_VERSIONS, accepted: readLocalLegal() },
+      care_plan: readLocalPlan(),
+    };
+    return new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  }
+}
+
+const LEGAL_KEY = "aftercare.demo.legal.v1";
+
+function readLocalLegal(): LegalStatus["accepted"] {
+  try {
+    const raw = localStorage.getItem(LEGAL_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as LegalStatus["accepted"]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalLegal(rows: LegalStatus["accepted"]) {
+  try {
+    if (rows.length) localStorage.setItem(LEGAL_KEY, JSON.stringify(rows));
+    else localStorage.removeItem(LEGAL_KEY);
+  } catch {
+    // Storage blocked: the agreement prompt will simply appear again next visit.
+  }
+}
+
+function localLegalStatus(accepted: LegalStatus["accepted"]): LegalStatus {
+  return {
+    required: { ...LEGAL_VERSIONS },
+    accepted,
+    needs: LEGAL_DOCUMENTS.filter((d) => !accepted.some((a) => a.document === d && a.version === LEGAL_VERSIONS[d])),
+    marketing_opt_in: false,
+    marketing_opt_in_at: null,
+  };
 }
 
 /* -------------------------------------------------------------------- account (Supabase via API) */
@@ -318,5 +389,21 @@ export class ApiBackend implements PlanBackend {
   async deleteAllData() {
     const res = await apiFetch<{ accountDeleted: boolean }>("/api/account", { method: "DELETE" });
     return { accountDeleted: res.accountDeleted };
+  }
+
+  legalStatus() {
+    return apiFetch<LegalStatus>("/api/legal");
+  }
+
+  acceptLegal(documents: LegalDocument[]) {
+    return apiFetch<LegalStatus>("/api/legal", { method: "POST", body: JSON.stringify({ documents }) });
+  }
+
+  setMarketing(optIn: boolean) {
+    return apiFetch<LegalStatus>("/api/legal", { method: "PATCH", body: JSON.stringify({ marketing_opt_in: optIn }) });
+  }
+
+  exportData() {
+    return apiBlob("/api/account/export");
   }
 }

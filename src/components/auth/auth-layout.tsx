@@ -1,5 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { LegalLinks } from "@/components/legal/site-footer";
 import { Logo } from "@/components/shared/logo";
 
 const POINTS = [
@@ -34,6 +35,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-1 items-center justify-center py-10">
           {children}
         </div>
+        <LegalLinks className="justify-center text-muted-foreground" />
       </main>
     </div>
   );

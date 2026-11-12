@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { DemoCleanup } from "@/components/landing/demo-cleanup";
 import { ProductPreview } from "@/components/landing/product-preview";
+import { LegalLinks } from "@/components/legal/site-footer";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 
@@ -297,9 +298,12 @@ export default function LandingPage() {
       <footer className="border-t bg-card">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:px-6 md:flex-row md:items-center md:justify-between">
           <Logo />
-          <p className="max-w-2xl">
-            AFTERCARE AI is an educational prototype that organizes documents you provide. It is not medical advice, has no regulatory approval, and is not for emergencies. Always follow your healthcare team’s instructions.
-          </p>
+          <div className="max-w-2xl space-y-2">
+            <p>
+              AFTERCARE AI is an educational prototype that organizes documents you provide. It is not medical advice, has no regulatory approval, and is not for emergencies. Always follow your healthcare team’s instructions.
+            </p>
+            <LegalLinks />
+          </div>
         </div>
       </footer>
     </div>

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useSignOut } from "@/components/app/app-shell";
 import { PageHeader } from "@/components/app/plan-gate";
+import { DataAndAgreements } from "@/components/legal/data-and-agreements";
 import { ExportButton } from "@/components/recovery/export-button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         </Card>
+        <DataAndAgreements />
       </div>
 
       <ConfirmDialog

@@ -32,6 +32,7 @@ beforeEach(() => {
   generateContent.mockReset();
   vi.stubEnv("GEMINI_API_KEY", "");
   vi.stubEnv("AFTERCARE_AI_PROVIDER", "");
+  vi.stubEnv("GEMINI_PAID_TIER", "true");
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -66,6 +67,12 @@ describe("unconfigured AI", () => {
   it("raises a clear configuration error instead of fabricating a result", async () => {
     const { extractDocument } = await loadPipeline({});
     await expect(extractDocument(fixture("synthetic-discharge-summary.pdf"), "application/pdf")).rejects.toMatchObject({ code: "ai_unconfigured" });
+  });
+
+  it("refuses to send documents through a Gemini key not confirmed as paid tier (no training on user data)", async () => {
+    const { extractDocument } = await loadPipeline({ GEMINI_API_KEY: "free-tier-key", GEMINI_PAID_TIER: "" });
+    await expect(extractDocument(fixture("synthetic-discharge-summary.pdf"), "application/pdf")).rejects.toMatchObject({ code: "ai_unconfigured" });
+    expect(generateContent).not.toHaveBeenCalled();
   });
 });
 

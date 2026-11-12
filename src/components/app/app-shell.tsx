@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { LegalLinks } from "@/components/legal/site-footer";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -145,8 +146,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
 
-        <footer className="hidden border-t px-10 py-4 text-xs text-muted-foreground lg:block">
-          AFTERCARE AI organizes the documents you provide. It does not give medical advice. In an emergency, call your local emergency number.
+        <footer className="hidden border-t px-10 py-4 text-xs text-muted-foreground lg:flex lg:items-center lg:justify-between lg:gap-6">
+          <span>AFTERCARE AI organizes the documents you provide. It does not give medical advice. In an emergency, call your local emergency number.</span>
+          <LegalLinks className="shrink-0 text-xs" />
         </footer>
 
         {/* Mobile bottom navigation */}

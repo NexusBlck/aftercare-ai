@@ -20,6 +20,7 @@ export const DELETE = handle(async () => {
   // Cascades to documents and every extracted item.
   const { error: planError } = await supabase.from("care_plans").delete().eq("user_id", user.id);
   if (planError) throw new AppError("database_error", "We could not delete your care plans.", 500, true);
+  await supabase.from("legal_acceptances").delete().eq("user_id", user.id);
   await supabase.from("profiles").delete().eq("id", user.id);
 
   const admin = createAdminSupabase();

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { ClientRoot } from "@/components/app/client-root";
+import { ConsentGate } from "@/components/legal/consent-gate";
 import { LogoMark } from "@/components/shared/logo";
 
 function AppLoading() {
@@ -16,7 +17,9 @@ function AppLoading() {
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <Suspense fallback={<AppLoading />}>
-      <ClientRoot>{children}</ClientRoot>
+      <ClientRoot>
+        <ConsentGate>{children}</ConsentGate>
+      </ClientRoot>
     </Suspense>
   );
 }

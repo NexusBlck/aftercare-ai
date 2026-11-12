@@ -111,7 +111,7 @@ export default function ReviewPage() {
           <>
             <PageHeader
               title="Review extracted information"
-              description="Compare each item with your original document. Confirm it, correct it, or mark it for your clinician. Confirming means it matches your document — it is not a medical check."
+              description="These items were extracted from your documents by AI, which can make mistakes. Compare each one with your original document, then confirm it, correct it, or mark it for your clinician. Confirming means it matches your document. It is not a medical check."
             />
 
             <div className="mb-6 rounded-2xl border bg-card p-5">

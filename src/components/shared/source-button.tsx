@@ -44,11 +44,18 @@ export function SourceButton({
             </DialogDescription>
           </DialogHeader>
           {excerpt ? (
+            <>
+            <p className="text-xs text-muted-foreground">
+              {doc?.processing_status === "sample"
+                ? "Sample data: precomputed from a synthetic document, not a live AI result."
+                : "This item was extracted automatically by AI. Check it against the exact text below and your original document."}
+            </p>
             <figure className="rounded-lg border-l-4 border-teal bg-teal-soft/60 p-4">
               <Quote className="mb-1 size-4 text-teal" aria-hidden />
               <blockquote className="text-sm leading-relaxed text-foreground">{excerpt}</blockquote>
               <figcaption className="mt-2 text-xs text-muted-foreground">Exact text quoted from the document</figcaption>
             </figure>
+            </>
           ) : (
             <p className="rounded-lg border border-amber/30 bg-amber-soft p-4 text-sm text-amber">
               No supporting text was returned for this item. Check it carefully against the original document.
