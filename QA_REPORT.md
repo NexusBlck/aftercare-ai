@@ -86,7 +86,7 @@ Test-only corrections, not app bugs:
 2. The CSP needs `'unsafe-inline'` for scripts. Removing it would mean per-request nonces and fully dynamic rendering.
 3. ZAP ran only the passive baseline. No authenticated or active (attack) scan was run, because there is no account backend to authenticate against.
 4. Lighthouse covered only public and onboarding URLs; the app screens need browser-stored demo data. Those screens are covered by the axe and Playwright checks instead.
-5. **The live Vercel site still runs the pre-audit build.** These fixes are only on `feat/aftercare-initial-build` until they are merged into `main` and redeployed.
+5. The live site (https://aftercare-ai-pi.vercel.app) was redeployed from `main` after the audit. It is verified live: all security headers present, no console or CSP errors on any screen, demo journey and PDF export work, and Lighthouse scores 100 across the board except onboarding mobile performance (97).
 6. The limitations listed in `PROGRESS.md` still apply: the single daily completion flag, Urdu not shown in the PDF, the demo upload size cap on Vercel, and the per-instance rate limiter.
 
 ## How to reproduce
