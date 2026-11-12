@@ -28,7 +28,7 @@ from the Supabase dashboard); fixed in 0003.
 - Separate free Supabase project `aftercare-ai-test` (`lpnhqogpyamvbtsnsjxc`); migrations 0001–0003 applied
   (29 tables, all RLS; 53 policies; private bucket; anon has no table access). Email confirmation off on that project only.
 - Vercel preview of `clinic-portal` with one-off overrides (test DB, test extractor, service-role key disabled, SMTP to
-  localhost): https://aftercare-po7mg9h66-nexus-blck.vercel.app (Vercel-Authentication protected). Production project,
+  localhost): https://aftercare-hol1x0rnf-nexus-blck.vercel.app (Vercel-Authentication protected). Production project,
   production env vars and shared preview env vars were not changed.
 - `npx playwright test --config playwright.live.config.ts`: ✅ **11 passed** — full signed-in workflow with seven synthetic
   accounts (see TESTING.md). Found and fixed two Data API relationship defects in 0003; added code-only DB error logging.
