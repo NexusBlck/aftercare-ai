@@ -24,7 +24,7 @@ export const GET = handle(async (_req: Request, ctx: RouteContext<"/api/clinic/p
       .order("created_at", { ascending: false }),
     db
       .from("recovery_plans")
-      .select("id, episode_id, title, approved_version_id, created_at, versions:plan_versions(id, version, status, updated_at)")
+      .select("id, episode_id, title, approved_version_id, created_at, versions:plan_versions!plan_versions_plan_id_organization_id_fkey(id, version, status, updated_at)")
       .eq("organization_id", org)
       .eq("patient_id", id),
     db

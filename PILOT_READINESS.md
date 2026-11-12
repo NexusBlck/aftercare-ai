@@ -3,21 +3,21 @@
 Target: a supervised pilot with **one clinic, one department, a small patient cohort**, after synthetic testing.
 
 **Current assessment: not ready for real patients.** The software is technically implemented and tested with
-synthetic data. Operational, legal and clinical approvals have not happened, and the clinic portal has not been
-deployed or tested against a live Supabase project.
+synthetic data, including a full signed-in workflow against a separate Supabase test project. Operational, legal and
+clinical approvals have not happened, and the clinic portal is not deployed to production.
 
 ## Status by dimension
 
 | Area | Technically implemented | Tested (automated) | Independently reviewed | Operationally configured | Legally reviewed | Clinically approved |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
-| Multi-tenant data model + RLS | ✓ | ✓ (PGlite, 37 tests) | ✗ | ✗ (not applied to any Supabase project) | — | — |
-| Clinic onboarding, staff, roles | ✓ | ✓ DB / ◐ UI (no signed-in E2E) | ✗ | ✗ | — | — |
-| Patient registration, episodes | ✓ | ✓ DB / ◐ UI | ✗ | ✗ | ✗ (data minimisation, consent wording) | — |
-| Document upload (private storage) | ✓ | ◐ (storage policies modelled, not live) | ✗ | ✗ (no malware scanning) | ✗ | — |
+| Multi-tenant data model + RLS | ✓ | ✓ (PGlite 37 + live test project 11) | ✗ | ◐ (test project only; not production) | — | — |
+| Clinic onboarding, staff, roles | ✓ | ✓ DB + live | ✗ | ✗ | — | — |
+| Patient registration, episodes | ✓ | ✓ DB + live | ✗ | ✗ | ✗ (data minimisation, consent wording) | — |
+| Document upload (private storage) | ✓ | ✓ live (Supabase Storage) | ✗ | ✗ (no malware scanning) | ✗ | — |
 | AI extraction (existing pipeline) | ✓ | ✓ synthetic only | ✗ | ✗ (needs paid-tier Gemini key) | ✗ (Google as processor, DPA) | ✗ (accuracy on real documents) |
 | Clinical review + approval + versioning | ✓ | ✓ | ✗ | ✗ | — | ✗ |
-| Patient invitations + account linking | ✓ | ✓ DB / ◐ UI | ✗ | ✗ (manual delivery only) | ✗ | — |
-| Patient care-team view | ✓ | ◐ (demo regression only) | ✗ | ✗ | — | ✗ |
+| Patient invitations + account linking | ✓ | ✓ DB + live | ✗ | ✗ (manual delivery only) | ✗ | — |
+| Patient care-team view | ✓ | ✓ live | ✗ | ✗ | — | ✗ |
 | Follow-ups, questions, urgent screen | ✓ | ✓ | ✗ | ✗ | — | ✗ (keyword list + wording) |
 | Notifications | in-app ✓ | ✓ | ✗ | email/SMS not configured | — | — |
 | Subscriptions | manual ✓ | ✓ | ✗ | ✗ | ✗ (B2B terms) | — |
@@ -29,8 +29,8 @@ deployed or tested against a live Supabase project.
 
 ### Critical blockers (before any real patient)
 
-1. **Apply and test on a separate Supabase test project** and run the full signed-in workflow with synthetic
-   accounts (DEPLOYMENT.md step 1). Requires owner approval.
+1. ~~Test on a separate Supabase test project~~ — **done 2026-11-13**: `aftercare-ai-test`, 11/11 live workflow tests
+   pass (TESTING.md). Remaining: apply 0003 to **production** after a backup (needs owner approval).
 2. **Legal:** the current Terms of Service and Privacy Policy describe a free patient app ("no charges … subscriptions")
    and do not cover clinics as customers. A **B2B agreement / data-processing agreement** with the pilot clinic, updated
    privacy notices (clinic as controller, AFTERCARE AI as processor), consent wording for clinic-registered patients,

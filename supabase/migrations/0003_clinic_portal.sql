@@ -220,6 +220,8 @@ create table public.recovery_plans (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   foreign key (episode_id, organization_id, patient_id) references public.care_episodes (id, organization_id, patient_id) on delete cascade,
+  -- Direct link to the patient: tenant integrity, and lets the Data API embed the patient in plan queries.
+  constraint recovery_plans_patient_fk foreign key (patient_id, organization_id) references public.clinic_patients (id, organization_id) on delete cascade,
   unique (id, organization_id),
   unique (id, organization_id, patient_id)
 );
@@ -242,7 +244,9 @@ create table public.plan_versions (
   decided_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  foreign key (plan_id, organization_id) references public.recovery_plans (id, organization_id) on delete cascade,
+  -- Named explicitly: the API embeds plans through this relationship (recovery_plans also references
+  -- plan_versions via approved_version_id, so embeds must name which one).
+  constraint plan_versions_plan_id_organization_id_fkey foreign key (plan_id, organization_id) references public.recovery_plans (id, organization_id) on delete cascade,
   unique (plan_id, version),
   unique (id, organization_id)
 );

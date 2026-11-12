@@ -67,5 +67,7 @@ export function mapDbError(error: DbErrorLike | null | undefined, fallback = "co
   if (error?.code === "42501" || /row-level security/i.test(message)) {
     return new AppError("forbidden", "Your role does not allow this action.", 403);
   }
+  // Codes only: database messages can contain record values.
+  console.error(JSON.stringify({ level: "db", type: "unmapped_error", code: error?.code ?? null, context: fallback }));
   return new AppError("database_error", `We could not ${fallback}. Please try again.`, 500, true);
 }

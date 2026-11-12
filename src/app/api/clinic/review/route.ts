@@ -9,7 +9,7 @@ export const GET = handle(async () => {
   const { data, error } = await ctx.supabase
     .from("plan_versions")
     .select(
-      "id, version, status, submitted_by, submitted_at, updated_at, flags:bundle->flags, plan:recovery_plans(id, title, approved_version_id, patient:clinic_patients(id, full_name, mrn))",
+      "id, version, status, submitted_by, submitted_at, updated_at, flags:bundle->flags, plan:recovery_plans!plan_versions_plan_id_organization_id_fkey(id, title, approved_version_id, patient:clinic_patients(id, full_name, mrn))",
     )
     .eq("organization_id", ctx.orgId)
     .in("status", ["pending_review", "draft", "changes_requested"])

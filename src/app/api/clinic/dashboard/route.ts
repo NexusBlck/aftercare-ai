@@ -28,7 +28,7 @@ export const GET = handle(async () => {
     db.from("clinic_patients").select("id, full_name, mrn, created_at, linked_at").eq("organization_id", org).eq("status", "active").order("created_at", { ascending: false }).limit(5),
     db
       .from("plan_versions")
-      .select("id, version, submitted_at, plan:recovery_plans(id, title, patient:clinic_patients(id, full_name))")
+      .select("id, version, submitted_at, plan:recovery_plans!plan_versions_plan_id_organization_id_fkey(id, title, patient:clinic_patients(id, full_name))")
       .eq("organization_id", org)
       .eq("status", "pending_review")
       .order("submitted_at", { ascending: true })

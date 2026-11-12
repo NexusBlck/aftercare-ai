@@ -48,12 +48,36 @@ revocation test fail.
 | `tests/e2e/clinic.spec.ts` | clinic routes require sign-in; registration page validation + accessibility; invitation token read from the URL fragment, removed and never sent to the server; CSRF on clinic/care-team APIs; demo + care-team regression |
 | existing `tests/e2e/*` | full patient journey, legal, security, responsive and accessibility audits (unchanged) |
 
+## Live signed-in workflow (`tests/live/`, `playwright.live.config.ts`)
+
+Runs a local production build against a **separate Supabase test project** (`aftercare-ai-test`, never production)
+with the deterministic extractor and SMTP disabled. Seven fresh synthetic accounts per run: Clinic A owner,
+clinician and nurse, Clinic B owner, Patient A, Patient B, an outsider.
+
+```bash
+# .env.test-project.local (gitignored): NEXT_PUBLIC_SUPABASE_URL=…test project…, NEXT_PUBLIC_SUPABASE_ANON_KEY=…
+set -a; . ./.env.test-project.local; set +a; AFTERCARE_AI_PROVIDER=mock npx next build
+npx playwright test --config playwright.live.config.ts
+npx next build   # rebuild without the test variables before the normal E2E suite
+```
+
+11 tests cover acceptance workflows 1–13 end to end through the real Supabase Auth, PostgREST, RLS, RPCs and
+Storage: clinic creation (one through the UI), email-bound single-use staff invitations, role enforcement, patient
+registration + duplicate detection, signed upload + byte verification (a fake PDF is rejected), extraction into a
+draft, clinician edits with optimistic concurrency, flag resolution, attested approval (nurse/owner/patient refused),
+hashed patient invitation with date-of-birth check and reuse protection, the patient's approved-only view,
+progress/attendance reports, urgent-question screening and staff reply, notifications, dashboard counts, cross-clinic
+404s on every resource, revision without losing the approved version, revocation and unauthenticated 401s, and audit
+coverage. Screenshots are written to `test-results/live/`.
+
+The first live runs found two defects the in-process database tests could not (they don't go through PostgREST):
+`recovery_plans` had no direct relationship to `clinic_patients`, and `plan_versions` ↔ `recovery_plans` embeds were
+ambiguous. Patient search, the dashboard, review queue, follow-ups and patient detail would have failed in a real
+deployment. Both are fixed in `0003` (a direct composite FK and an explicitly named FK used as the embed hint).
+
 ## What is *not* covered automatically
 
-- **Browser end-to-end tests of signed-in clinic workflows** (register clinic → invite staff → upload → approve →
-  invite patient → patient view) need a Supabase project with migration 0003 applied. The E2E server deliberately runs
-  without Supabase. To run them, create a **separate** free Supabase test project, apply all migrations, and set
-  `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` for a local run. The live RLS test
-  (`tests/integration/rls.test.ts`) also targets such a project via `SUPABASE_TEST_*` variables.
-- Real Supabase Storage policy behaviour (the harness models `storage.objects` RLS, not the storage API).
-- Live Gemini extraction quality on real documents.
+- The live suite runs locally; the Vercel preview of `clinic-portal` is protected by Vercel Authentication, so it was
+  not driven by automation.
+- Live Gemini extraction quality on real documents (the test extractor is used).
+- Malware scanning (not implemented).

@@ -10,7 +10,7 @@ export const POST = handle(async (request: Request) => {
   const body = await parseJson(request, ProgressSchema);
   // RLS returns the version only if it is the approved version of one of this patient's plans.
   const version = must(
-    await supabase.from("plan_versions").select("id, organization_id, plan:recovery_plans(patient_id)").eq("id", body.version_id).maybeSingle(),
+    await supabase.from("plan_versions").select("id, organization_id, plan:recovery_plans!plan_versions_plan_id_organization_id_fkey(patient_id)").eq("id", body.version_id).maybeSingle(),
     "recovery plan",
   ) as unknown as { id: string; organization_id: string; plan: { patient_id: string } };
 
