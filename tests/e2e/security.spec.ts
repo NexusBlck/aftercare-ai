@@ -103,6 +103,7 @@ test("XSS: script and HTML in user input render as plain text", async ({ page })
   });
   await page.goto("/demo");
   await page.getByRole("button", { name: "Open the sample plan" }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
   await page.goto("/medications");
   const card = page.locator("article").filter({ has: page.getByRole("heading", { name: /Ibuprofen/ }) });
   await card.getByRole("button", { name: "Correct Ibuprofen" }).click();
