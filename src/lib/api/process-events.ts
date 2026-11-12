@@ -11,7 +11,7 @@ export type ProcessEvent =
   | { type: "done"; bundle: PlanBundle }
   | {
       type: "extracted";
-      result: { extraction: Extraction; issues: SanitizerIssue[]; model: string; provider: "gemini" | "mock"; schemaVersion: string };
+      result: { extraction: Extraction; issues: SanitizerIssue[]; model: string; provider: "gemini" | "mock" | "freellmapi"; schemaVersion: string };
     }
   | { type: "error"; error: ApiErrorBody["error"] };
 

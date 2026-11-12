@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalLayout } from "@/components/legal/legal-layout";
+import { freeTierAiEnabled } from "@/lib/ai-disclosure";
 
 export const metadata: Metadata = { title: "Subprocessors" };
 
@@ -31,7 +32,19 @@ const SUBPROCESSORS = [
   },
 ];
 
+/** Listed only while FreeLLMAPI is the configured AI provider. */
+const FREE_TIER_AI = {
+  name: "Free-tier AI providers routed by FreeLLMAPI",
+  purpose: "Reading documents you choose to process and writing plain-language explanations. The provider is chosen per request.",
+  data: "The text of processed documents (or the photo), and the extracted items",
+  location:
+    "Varies per request and may be outside your country. The pool can include Google (Gemini), Groq, Cerebras, Mistral, OpenRouter, Cloudflare, Cohere, NVIDIA, Hugging Face, Z.ai and other free providers enabled on our router",
+  status: "Active. Free tiers may keep and use submitted content to improve their models.",
+  terms: "https://github.com/tashfeenahmed/freellmapi",
+};
+
 export default function SubprocessorsPage() {
+  const rows = freeTierAiEnabled() ? [...SUBPROCESSORS, FREE_TIER_AI] : SUBPROCESSORS;
   return (
     <LegalLayout title="Subprocessors">
       <p>
@@ -48,7 +61,7 @@ export default function SubprocessorsPage() {
           </tr>
         </thead>
         <tbody>
-          {SUBPROCESSORS.map((s) => (
+          {rows.map((s) => (
             <tr key={s.name}>
               <td>
                 <a href={s.terms} rel="noopener noreferrer" target="_blank">

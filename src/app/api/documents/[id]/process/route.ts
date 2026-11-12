@@ -53,7 +53,7 @@ export const POST = handle(async (_req: NextRequest, ctx: RouteContext<"/api/doc
 
   const { data: run } = await supabase
     .from("extraction_runs")
-    .insert({ document_id: id, user_id: user.id, model_identifier: ai.model, provider: ai.provider, status: "started", schema_version: EXTRACTION_SCHEMA_VERSION })
+    .insert({ document_id: id, user_id: user.id, model_identifier: ai.model.slice(0, 200), provider: ai.provider, status: "started", schema_version: EXTRACTION_SCHEMA_VERSION })
     .select("id")
     .single();
 
@@ -79,7 +79,7 @@ export const POST = handle(async (_req: NextRequest, ctx: RouteContext<"/api/doc
       let after = applyExtraction(before, { documentId: id, extraction: result.extraction, issues: result.issues }, domainCtx);
 
       const explainable = collectExplainable(after, id);
-      if (explainable.length > 0 && result.provider === "gemini") {
+      if (explainable.length > 0 && result.provider !== "mock") {
         emit({ type: "stage", stage: "explaining" });
         const explanations = await explainItems(explainable);
         if (explanations) after = applyExplanations(after, explainable, explanations);
