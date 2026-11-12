@@ -18,16 +18,32 @@ jobs:
   strix:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[run-strix]')
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 340
     env:
-      STRIX_LLM: gemini/gemini-3.5-flash
-      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.LLM_API_KEY }}
+      # Zero-cost model: open weights served by Ollama on the runner itself. No paid API and no
+      # third-party account. Free runners have no GPU and 16 GB RAM, so this is the largest
+      # practical model; Strix's docs note local models are weaker than hosted ones.
+      STRIX_LLM: ollama_chat/qwen3.5:9b
+      LLM_API_BASE: http://localhost:11434
+      LLM_API_KEY: ollama
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-python@v7.1.0
         with:
           python-version: "3.13"
+      - name: Start Ollama with a local model
+        env:
+          OLLAMA_CONTEXT_LENGTH: "65536"
+          OLLAMA_FLASH_ATTENTION: "1"
+          OLLAMA_KV_CACHE_TYPE: q8_0
+          OLLAMA_KEEP_ALIVE: "-1"
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl stop ollama 2>/dev/null || true
+          nohup ollama serve > /tmp/ollama.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/version && break; sleep 2; done
+          ollama pull qwen3.5:9b
+          ollama list
       - name: Install Strix (official package)
         run: pip install --quiet strix-agent==1.7.0
       - name: Run Strix (output kept private)
@@ -38,7 +54,7 @@ jobs:
             --target ./ \
             --target https://aftercare-ai-pi.vercel.app \
             --instruction-file .strix/instructions.md \
-            --scan-mode standard \
+            --scan-mode quick \
             --scope-mode full \
             --max-budget 5 \
             > private/strix-console.log 2>&1
