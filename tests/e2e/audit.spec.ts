@@ -354,3 +354,7 @@ test("the CSP does not block the app: fonts, PDF preview and export work without
   await download;
   expect(violations).toEqual([]);
 });
+
+test("cross-origin resource policy is same-origin", async ({ request }) => {
+  expect((await request.get("/")).headers()["cross-origin-resource-policy"]).toBe("same-origin");
+});

@@ -1,2 +1,7 @@
 # ZAP baseline rule overrides: <rule id>	<IGNORE|INFO|WARN|FAIL>	<justification>
 # Every override must say why it is acceptable for this application.
+10055	IGNORE	(CSP unsafe-inline: Next.js injects inline bootstrap scripts/styles into prerendered pages; nonces would force fully dynamic rendering. All other directives are locked to self + Supabase, with frame-ancestors/object-src none.)
+10010	IGNORE	(aftercare_demo cookie is intentionally readable by page scripts to select browser-only demo storage; value is the constant 1, no personal data; SameSite=Lax, Secure on HTTPS.)
+90004	IGNORE	(COEP not used: the app needs no cross-origin isolation and require-corp would block signed Supabase document previews. CORP same-origin is set.)
+10049	IGNORE	(Informational cacheability notice; API responses are no-store, static assets are immutable.)
+10109	IGNORE	(Informational: modern web application detected.)
