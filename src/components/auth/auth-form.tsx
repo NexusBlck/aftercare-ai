@@ -44,7 +44,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; consent?: string; form?: string }>({});
-  const [consent, setConsent] = useState({ age: false, terms: false, health: false, marketing: false });
+  const [consent, setConsent] = useState({ accepted: false, marketing: false });
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -57,8 +57,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       setErrors({ email: fieldErrors.email?.[0], password: fieldErrors.password?.[0] });
       return;
     }
-    if (mode === "signup" && !(consent.age && consent.terms && consent.health)) {
-      setErrors({ consent: "Please tick the three required boxes to create an account." });
+    if (mode === "signup" && !consent.accepted) {
+      setErrors({ consent: "Please agree to the Terms of Service and Privacy Policy to create an account." });
       return;
     }
     setErrors({});
@@ -79,7 +79,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           method: "POST",
           body: JSON.stringify({
             ...parsed.data,
-            consents: { age: consent.age, terms: consent.terms, health_data: consent.health, marketing: consent.marketing },
+            consents: { accepted: consent.accepted, marketing: consent.marketing },
           }),
         });
         if (res.needsConfirmation) {
@@ -172,27 +172,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           )}
         </div>
         {mode === "signup" && (
-          <fieldset className="grid gap-2.5" aria-describedby={errors.consent ? "consent-error" : undefined}>
-            <legend className="mb-1 text-sm font-medium">Your agreement</legend>
-            <ConsentBox id="consent-age" checked={consent.age} onChange={(v) => setConsent({ ...consent, age: v })} required>
-              I am 18 or older. If I add documents about someone else, I am their parent, guardian or otherwise authorised.
-            </ConsentBox>
-            <ConsentBox id="consent-terms" checked={consent.terms} onChange={(v) => setConsent({ ...consent, terms: v })} required>
+          <fieldset className="grid gap-3" aria-describedby={errors.consent ? "consent-error" : undefined}>
+            <legend className="sr-only">Agreements</legend>
+            <ConsentBox id="consent-terms" checked={consent.accepted} onChange={(v) => setConsent({ ...consent, accepted: v })} required>
               I agree to the{" "}
               <Link href="/terms" target="_blank" className="font-semibold underline underline-offset-2">
-                Terms of service
+                Terms of Service
               </Link>{" "}
               and{" "}
               <Link href="/privacy" target="_blank" className="font-semibold underline underline-offset-2">
-                Privacy policy
+                Privacy Policy
               </Link>
-              , and understand AFTERCARE AI is not medical advice.
-            </ConsentBox>
-            <ConsentBox id="consent-health" checked={consent.health} onChange={(v) => setConsent({ ...consent, health: v })} required>
-              I explicitly consent to AFTERCARE AI processing the health information in documents I upload, as described in the Privacy policy.
+              , including processing of my health information
             </ConsentBox>
             <ConsentBox id="consent-marketing" checked={consent.marketing} onChange={(v) => setConsent({ ...consent, marketing: v })}>
-              Optional: send me occasional product updates by email. I can unsubscribe any time in Settings.
+              Send me product updates and offers by email
             </ConsentBox>
             {errors.consent && (
               <p id="consent-error" className="text-sm text-danger" role="alert">
@@ -262,7 +256,14 @@ function ConsentBox({
       />
       <label htmlFor={id} className="leading-snug">
         {children}
-        {required && <span className="sr-only"> (required)</span>}
+        {required && (
+          <>
+            <span aria-hidden className="ml-0.5 font-semibold text-danger">
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </>
+        )}
       </label>
     </div>
   );

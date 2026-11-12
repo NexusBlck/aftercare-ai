@@ -81,9 +81,9 @@ test("sensitive files are never served", async ({ request }) => {
 test("server-side validation rejects malformed and out-of-range input", async ({ request }) => {
   const bad = [
     ["/api/auth/login", { email: "not-an-email", password: "x" }],
-    ["/api/auth/signup", { email: "a@b.co", password: "short", consents: { age: true, terms: true, health_data: true, marketing: false } }],
-    ["/api/auth/signup", { email: "a@b.co", password: "x".repeat(73), consents: { age: true, terms: true, health_data: true, marketing: false } }],
-    ["/api/auth/signup", { email: "a@b.co", password: "long-enough-1", consents: { age: true, terms: false, health_data: true, marketing: false } }],
+    ["/api/auth/signup", { email: "a@b.co", password: "short", consents: { accepted: true, marketing: false } }],
+    ["/api/auth/signup", { email: "a@b.co", password: "x".repeat(73), consents: { accepted: true, marketing: false } }],
+    ["/api/auth/signup", { email: "a@b.co", password: "long-enough-1", consents: { accepted: false, marketing: false } }],
     ["/api/auth/reset", { email: "<script>alert(1)</script>" }],
   ] as const;
   for (const [url, data] of bad) {

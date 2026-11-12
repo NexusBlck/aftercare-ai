@@ -17,13 +17,13 @@ describe.skipIf(!built)("client bundle", () => {
   const bundle = built ? files(staticDir).map((f) => readFileSync(f, "utf8")).join("\n") : "";
 
   it("does not reference server-only secret variable names", () => {
-    for (const name of ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "AFTERCARE_AI_PROVIDER"]) {
+    for (const name of ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "AFTERCARE_AI_PROVIDER", "SMTP_PASS", "SMTP_USER"]) {
       expect(bundle.includes(name), name).toBe(false);
     }
   });
 
   it("does not contain secret values from the environment", () => {
-    for (const name of ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
+    for (const name of ["GEMINI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "SMTP_PASS"]) {
       const value = process.env[name];
       if (value && value.length > 8) expect(bundle.includes(value), name).toBe(false);
     }

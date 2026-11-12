@@ -17,9 +17,9 @@ export const SignupSchema = z.object({
   email: EmailSchema,
   password: PasswordSchema,
   consents: z.object({
-    age: z.literal(true),
-    terms: z.literal(true),
-    health_data: z.literal(true),
+    /** Terms (incl. 18+ eligibility), Privacy Policy and health-data processing: one required box. */
+    accepted: z.literal(true),
+    /** Promotional email opt-in: optional and separate. */
     marketing: z.boolean(),
   }),
 });

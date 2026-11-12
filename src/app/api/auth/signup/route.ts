@@ -1,4 +1,6 @@
 import { enforceRateLimit } from "@/lib/api/auth-guards";
+import { sendEmail } from "@/lib/email/mailer";
+import { welcomeEmail } from "@/lib/email/templates";
 import { AppError } from "@/lib/api/errors";
 import { handle, ok, parseJson } from "@/lib/api/route-utils";
 import { LEGAL_VERSIONS } from "@/lib/legal";
@@ -7,8 +9,9 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { SignupSchema } from "@/schemas/auth";
 
 /**
- * Server-side sign-up. The three required consents are validated here as literal `true`, and
- * the accepted document versions come from the server, then are recorded by a database trigger.
+ * Server-side sign-up. The required agreement (Terms, which include 18+ eligibility, Privacy Policy
+ * and health-data processing) is validated as literal `true`. The accepted document versions
+ * come from the server and are recorded by a database trigger.
  */
 export const POST = handle(async (request: Request) => {
   enforceRateLimit(request, "signup-ip", clientIp(request), 5, 60 * 60_000);
@@ -24,7 +27,7 @@ export const POST = handle(async (request: Request) => {
       emailRedirectTo: `${origin}/auth/callback?next=/onboarding`,
       data: {
         legal: { terms: LEGAL_VERSIONS.terms, privacy: LEGAL_VERSIONS.privacy, health_data: LEGAL_VERSIONS.health_data },
-        age_confirmed: consents.age,
+        age_confirmed: consents.accepted,
         marketing_opt_in: consents.marketing,
       },
     },
@@ -34,7 +37,10 @@ export const POST = handle(async (request: Request) => {
     if (/password/i.test(error.message)) throw new AppError("invalid_request", error.message, 400);
     throw new AppError("invalid_request", "We could not create the account. Please check your details and try again.", 400);
   }
-  // With email confirmation on, Supabase returns no session (also for an already-registered
-  // address), so this response does not reveal whether the email is already in use.
+  // A brand-new account has an identity. Supabase returns none for an already-registered address
+  // when confirmation is on, so no welcome email is sent and the reply reveals nothing.
+  if (data.user && (data.user.identities?.length ?? 0) > 0) {
+    await sendEmail({ to: email, ...welcomeEmail({ appUrl: origin, marketingOptIn: consents.marketing }) });
+  }
   return ok({ needsConfirmation: !data.session });
 });

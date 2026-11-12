@@ -23,7 +23,7 @@ describe("CSRF: cross-site write detection", () => {
 });
 
 describe("server-side auth validation", () => {
-  const consents = { age: true, terms: true, health_data: true, marketing: false };
+  const consents = { accepted: true, marketing: false };
 
   it("normalises emails and rejects invalid ones", () => {
     expect(LoginSchema.parse({ email: "  Pat@Example.COM ", password: "x" }).email).toBe("pat@example.com");
@@ -38,12 +38,12 @@ describe("server-side auth validation", () => {
     expect(NewPasswordSchema.safeParse({ password: "x".repeat(73) }).success).toBe(false);
   });
 
-  it("requires the three consents to be literally true; marketing is optional", () => {
+  it("requires the agreement to be literally true; marketing is optional", () => {
     expect(SignupSchema.safeParse({ email: "a@b.co", password: "12345678", consents }).success).toBe(true);
-    for (const key of ["age", "terms", "health_data"] as const) {
-      expect(SignupSchema.safeParse({ email: "a@b.co", password: "12345678", consents: { ...consents, [key]: false } }).success, key).toBe(false);
-      expect(SignupSchema.safeParse({ email: "a@b.co", password: "12345678", consents: { ...consents, [key]: "true" } }).success, key).toBe(false);
-    }
+    expect(SignupSchema.safeParse({ email: "a@b.co", password: "12345678", consents: { ...consents, marketing: true } }).success).toBe(true);
+    expect(SignupSchema.safeParse({ email: "a@b.co", password: "12345678", consents: { ...consents, accepted: false } }).success).toBe(false);
+    expect(SignupSchema.safeParse({ email: "a@b.co", password: "12345678", consents: { ...consents, accepted: "true" } }).success).toBe(false);
+    expect(SignupSchema.safeParse({ email: "a@b.co", password: "12345678", consents: { marketing: false } }).success).toBe(false);
   });
 });
 
