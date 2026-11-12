@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { applyVersionEdit, approvalReadiness, VersionEditSchema } from "@/lib/clinic/plan-editing";
 import { assignableRoles, can, normalizeReviewer, permissionsFor } from "@/lib/clinic/permissions";
 import { mapDbError } from "@/lib/clinic/db-errors";
+import { hasUrgentKeywords } from "@/lib/clinic/urgent";
 import { PatchError } from "@/lib/domain/patch";
 import { createEmptyBundle } from "@/lib/domain/plan";
 import { CreatePatientSchema, DecisionSchema, RedeemPatientInviteSchema, StaffInviteSchema } from "@/schemas/clinic";
@@ -56,6 +57,29 @@ describe("clinic permissions", () => {
     expect(normalizeReviewer("nurse", true)).toBe(false);
     expect(normalizeReviewer("admin", true)).toBe(true);
     expect(permissionsFor(nurse)).not.toContain("plans.decide");
+  });
+});
+
+describe("urgent-symptom keyword screen", () => {
+  it("flags messages that may describe urgent symptoms, in English and Urdu", () => {
+    for (const text of [
+      "I have chest pain since this morning",
+      "I can't breathe properly",
+      "the wound is bleeding heavily and won't stop",
+      "I fainted in the bathroom",
+      "fever of 39.5 and shivering",
+      "there is pus coming from the wound",
+      "seene mein dard ho raha hai",
+      "مجھے سانس لینے میں مشکل ہے",
+    ]) {
+      expect(hasUrgentKeywords(text), text).toBe(true);
+    }
+  });
+
+  it("does not flag routine questions (and a non-match never means safe)", () => {
+    for (const text of ["When can I shower?", "Can I take my tablets with food?", "My follow-up letter has the wrong date"]) {
+      expect(hasUrgentKeywords(text), text).toBe(false);
+    }
   });
 });
 

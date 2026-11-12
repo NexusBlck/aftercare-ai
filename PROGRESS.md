@@ -1,5 +1,33 @@
 # Progress
 
+## Clinic portal (branch `clinic-portal`, 2026-11-13)
+
+Not pushed, not deployed, migration 0003 not applied to any Supabase project. All data synthetic.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Types | `next typegen && tsc --noEmit` | ✅ 0 errors |
+| Lint | `npx eslint src tests` | ✅ 0 problems |
+| Dependencies | `npm audit --omit=dev` | ✅ 0 vulnerabilities |
+| Unit + integration + DB | `npx vitest run` | ✅ 168 passed, 2 skipped (live Supabase RLS — no test project) |
+| DB security (PGlite, real migrations) | `npx vitest run tests/db` | ✅ 37 passed; mutation check confirmed the revocation test catches a removed status check |
+| Production build | `next build` | ✅ all routes compile (clinic + care-team pages included) |
+| E2E (desktop + mobile) | `npx playwright test` | ✅ 52 passed (incl. 6 new clinic tests) |
+
+Completed: multi-tenant schema + RLS + RPCs (0003), server-side tenancy/permissions, 40 new API routes (clinic, care-team, invitations, notifications),
+clinic portal UI (dashboard, patients, registration, patient record with uploads + AI extraction, review workspace,
+follow-ups, questions, staff, settings, subscription, audit), clinic registration, staff join, patient invitation,
+patient Care-team area, in-app notifications, docs (DATABASE_SCHEMA, SECURITY, CLINICAL_SAFETY, API_DOCUMENTATION,
+TESTING, DEPLOYMENT, PILOT_READINESS).
+
+Fixed along the way: the 0002 sign-up trigger failed when user metadata lacked `marketing_opt_in` (e.g. users created
+from the Supabase dashboard); fixed in 0003.
+
+Not done / blocked: signed-in browser E2E of clinic workflows (needs a Supabase test project — owner approval),
+malware scanning, staff MFA, legal B2B terms, clinical safety sign-off. See PILOT_READINESS.md.
+
+---
+
 Last updated: 2026-11-12. Status reflects commands actually run in this environment.
 
 ## Verification results

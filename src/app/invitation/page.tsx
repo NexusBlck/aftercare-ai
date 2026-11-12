@@ -28,7 +28,7 @@ export default function PatientInvitationPage() {
   useEffect(() => {
     apiFetch("/api/profile")
       .then(() => setSignedIn(true))
-      .catch((err) => setSignedIn(!(err instanceof ClientError && err.code === "unauthorized")));
+      .catch(() => setSignedIn(false));
   }, []);
 
   return (
