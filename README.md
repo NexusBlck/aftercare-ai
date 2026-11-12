@@ -25,6 +25,10 @@ UPLOAD → EXTRACT (Gemini) → VALIDATE (Zod + safety rules) → REVIEW → UND
 
 ## Quick start (no credentials needed)
 
+**Windows, one click:** double-click **`Start AFTERCARE AI.bat`** in the project folder. On first run it installs dependencies and builds the app, which takes a few minutes. After that it starts in seconds and opens http://localhost:3000 in your browser. Keep its window open while you use the app, and close the window to stop it. After changing the code, delete the `.next` folder so the next launch rebuilds.
+
+**Manual:**
+
 ```bash
 npm install
 ```
