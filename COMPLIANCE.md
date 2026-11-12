@@ -1,6 +1,6 @@
 # Legal and Compliance Checklist
 
-**Status as of 2026-11-12, branch `legal-compliance`.**
+**Status as of 2026-11-12. Live on https://aftercare-ai-pi.vercel.app (`main` @ `d260bd0`, CI green).**
 
 > **Not legal advice.** These items were implemented by an engineer based on what the app actually does. Because AFTERCARE AI processes health information, have a qualified lawyer review the Privacy policy and Terms, in your country and in the countries you serve, before relying on them. Health data is "special category" data under the GDPR, "sensitive personal data" under many other laws, and may fall under health-specific rules (for example HIPAA only if you work with US covered entities).
 
@@ -18,11 +18,11 @@
 | 2 | Terms of service | ✅ | `/terms`: prominent medical disclaimer, eligibility (18+ or guardian), acceptable use, your content, fees and refunds, availability, IP, copyright complaints, disclaimers, liability, termination, changes, governing law. |
 | 3 | Cookie banner | ✅ | `CookieNotice`, site-wide. The app sets only strictly necessary storage (sign-in session, demo flag, demo data), so this is an informational notice, not a consent wall. The full cookie table is in `/privacy#cookies`. |
 | 4 | Unsubscribe from marketing emails | ✅ / ➖ | The app sends **no marketing emails** today. The opt-in is off by default, and Settings → *Product update emails* switches it off at any time. If you start sending marketing email, every message must also include a one-click unsubscribe link and your postal address (CAN-SPAM, PECR). |
-| 5 | Data retention limits | ⚙️ | Defined in `/privacy#retention`. Enforced by `public.run_retention()` (AI logs 90 days, abandoned uploads 24 hours), scheduled daily with `pg_cron` in migration `0002`. **Takes effect once 0002 is applied to Supabase.** |
+| 5 | Data retention limits | ✅ | Defined in `/privacy#retention`. Enforced by `public.run_retention()` (AI logs 90 days, abandoned uploads 24 hours), scheduled daily with `pg_cron` in migration `0002`. Applied to Supabase on 2026-11-12, and the job is verified in `cron.job`. |
 | 6 | Explicit checkbox to accept privacy policy and terms | ✅ | Sign-up has 3 separate **required** checkboxes: age 18+, Terms and Privacy policy, and explicit health-data consent. None are pre-ticked. Demo visitors and existing accounts see the same agreements in a blocking prompt (`ConsentGate`). |
-| 7 | Record acceptance (who, what version, when) | ⚙️ | Table `legal_acceptances` (`user_id`, `document`, `version`, `source`, `accepted_at`).<br>• `accepted_at` is always set by the database clock, and users cannot edit records.<br>• Sign-up consent is written by a trigger on `auth.users` at account creation.<br>• Later versions are accepted in the app via `POST /api/legal`, where the server, not the client, chooses the version.<br>• Users see their records in Settings and in their data download.<br>**Takes effect once 0002 is applied.** |
+| 7 | Record acceptance (who, what version, when) | ✅ | Table `legal_acceptances` (`user_id`, `document`, `version`, `source`, `accepted_at`).<br>• `accepted_at` is always set by the database clock, and users cannot edit records.<br>• Sign-up consent is written by a trigger on `auth.users` at account creation.<br>• Later versions are accepted in the app via `POST /api/legal`, where the server, not the client, chooses the version.<br>• Users see their records in Settings and in their data download.<br>Applied and verified on Supabase: RLS on, policies for view, add and delete (no edit), sign-up trigger present. |
 | 8 | Refund policy | ✅ / ➖ | The app is free, with no charges, so there is nothing to refund. Terms §6 states this and commits to clear pricing, cancellation and refunds if paid features are ever added. |
-| 9 | Business contact details | ⚠️ | `/contact`, plus the privacy policy and terms, read `NEXT_PUBLIC_LEGAL_OPERATOR_NAME`, `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL`, `NEXT_PUBLIC_LEGAL_COUNTRY` and (optional) `NEXT_PUBLIC_LEGAL_POSTAL_ADDRESS`. These live in environment variables so personal details stay out of the public repository. **The owner must provide them before deploying.** Until then the pages say "Not yet published". |
+| 9 | Business contact details | ✅ | `/contact`, plus the privacy policy and terms, read `NEXT_PUBLIC_LEGAL_OPERATOR_NAME`, `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL`, `NEXT_PUBLIC_LEGAL_COUNTRY` and (optional) `NEXT_PUBLIC_LEGAL_POSTAL_ADDRESS`. These live in environment variables so personal details stay out of the public repository. Set in Vercel production and verified live on `/contact`, `/privacy` and `/terms` (operator Ahsan Arif, Pakistan). |
 
 ## Consent and data
 
@@ -70,17 +70,26 @@
 | 34 | Label AI-generated content | ✅ | **Simplified text:** labelled "AI-simplified", and Urdu as "not medically certified".<br>**Extracted items:** marked "Needs your review" until confirmed. The source dialog states "extracted automatically by AI", and the review page explains that AI can make mistakes.<br>**Sample data:** labelled as precomputed, not live AI. |
 | 35 | Parental consent for children's data | ✅ | Accounts are 18+ only (required sign-up checkbox; Terms §2; Privacy §12). A parent or guardian may upload a child's documents, and in doing so consents on the child's behalf. The checkbox wording requires authority over anyone else's documents. There is a contact route to delete a child's data. If you deliberately target children or teens, take legal advice first (COPPA, GDPR Art. 8). |
 
-## Owner actions before going live
+## Remaining owner actions
 
-1. **Contact details (item 9).** Set these in Vercel → Settings → Environment Variables (Production), then redeploy:
-   - `NEXT_PUBLIC_LEGAL_OPERATOR_NAME`
-   - `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL`
-   - `NEXT_PUBLIC_LEGAL_COUNTRY`
-   - optionally `NEXT_PUBLIC_LEGAL_POSTAL_ADDRESS`
-2. **Apply migration `supabase/migrations/0002_legal_consent_retention.sql`** in the Supabase SQL Editor (items 5, 7 and 10).
+1. ~~Contact details (item 9)~~: done, set in Vercel.
+2. ~~Apply migration 0002 (items 5, 7, 10)~~: done and verified.
 3. **Sign the Supabase DPA** and keep copies of the Vercel and Google terms (item 15).
-4. **Have a lawyer review** `/privacy` and `/terms`. Bump the versions in `src/lib/legal.ts` after any material change, and users will be asked to re-accept.
+4. **Have a lawyer review** `/privacy` and `/terms`, ideally one who knows Pakistan's data-protection rules and those of any country you serve. Bump the versions in `src/lib/legal.ts` after any material change, and users will be asked to re-accept.
 5. **Optional:** register a DMCA agent (item 33), and add a licence file if you want to open-source the code (item 32).
+
+## Live verification (2026-11-12)
+
+- All legal pages return 200 and show the operator details. The terms are governed by the laws of Pakistan.
+- Real-browser run against production:
+  - cookie notice shown to new visitors;
+  - sign-up has 4 consent boxes, none pre-ticked, and blocks submission until the 3 required ones are ticked (no account was created);
+  - demo consent prompt works, and the agreements appear in Settings;
+  - data download contains 3 agreement records and the plan;
+  - **no external hosts contacted**;
+  - no console errors.
+- `/api/legal` and `/api/account/export` return 401 when signed out.
+- CI on `main` (`d260bd0`): lint, types, tests, 37 E2E, Lighthouse and OWASP ZAP are all green.
 
 ## Verification
 
