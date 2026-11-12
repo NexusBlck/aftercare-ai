@@ -13,6 +13,7 @@ Last updated: 2026-11-12. Status reflects commands actually run in this environm
 | End-to-end (desktop + Pixel 7) | `npx playwright test` | ✅ 9 passed |
 | Client bundle secret scan | `tests/integration/bundle-secrets.test.ts` (after build) | ✅ no secret names/values, no Gemini SDK or prompts in client JS |
 | Live Gemini evaluation | `npm run test:ai` with the machine's `GEMINI_API_KEY` | ⚠️ partial — see below |
+| Production deployment | `vercel deploy --prod` | ✅ https://aftercare-ai-pi.vercel.app returns 200; sample-plan demo checked in a browser; AI and accounts intentionally unconfigured |
 | Browser QA | Built-in browser at 1440×900 and 375×812 | ✅ landing, onboarding, dashboard, review, medications (EN + Urdu) inspected |
 
 ### Live Gemini evaluation detail
@@ -68,11 +69,11 @@ Last updated: 2026-11-12. Status reflects commands actually run in this environm
 5. **Demo mode on Vercel.** `/api/extract` receives the file directly, so it is subject to the platform body limit (about 4.5 MB). Account mode uploads straight to Storage.
 6. **Rate limiting is per instance and in memory.** It is a best-effort guard; a shared limiter (for example Upstash or Postgres) would be needed at scale.
 7. **Image documents.** JPEG and PNG are accepted and sent to Gemini, but there is no image fixture or live image evaluation yet.
-8. **Not deployed.** Deploying needs the owner's Vercel and Supabase accounts.
+8. **Deployed as demo only.** The live site has no Gemini key (owner's choice) and no Supabase project, so live AI processing and accounts are off there. It does not redeploy on push yet; run `vercel git connect` to enable that.
 9. **No compliance claims.** No HIPAA or GDPR assessment has been done, and there is no clinical validation.
 
 ## Next highest-priority tasks
 
 1. Provision a Supabase test project, then run `tests/integration/rls.test.ts` and an account-mode journey.
 2. Re-run `npm run test:ai` once the Gemini quota resets (LOW thinking is now actually applied), and add an image fixture.
-3. Deploy to Vercel, verify the deployed URL, then record the demo video.
+3. Record the demo video against https://aftercare-ai-pi.vercel.app, and connect the GitHub repository to Vercel so pushes redeploy.
