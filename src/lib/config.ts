@@ -24,8 +24,12 @@ const EnvSchema = z.object({
   FREELLMAPI_BASE_URL: z.url().optional().or(z.literal("")),
   /** The router's unified key (dashboard → Keys). */
   FREELLMAPI_API_KEY: z.string().optional(),
-  /** "auto" lets the router choose; "auto:smartest" favours capability; or pin a catalog model id. */
-  FREELLMAPI_MODEL: z.string().min(1).default("auto:smartest"),
+  /** Ordered, comma-separated model preference; each is tried in turn ("auto" lets the router choose). */
+  FREELLMAPI_MODEL: z.string().min(1).max(300).default("gpt-oss-120b,gemini-3.1-flash-lite,auto"),
+  /** Same, for photos: only image-capable models ("auto" makes the router pick a vision model). */
+  FREELLMAPI_VISION_MODEL: z.string().min(1).max(300).default("gemini-3.1-flash-lite,gemini-flash-lite,auto"),
+  /** Per model attempt; several attempts must fit in the 300 s route limit. */
+  FREELLMAPI_TIMEOUT_MS: z.coerce.number().int().min(10_000).max(150_000).default(90_000),
 });
 
 export type ServerConfig = {
@@ -33,7 +37,7 @@ export type ServerConfig = {
   ai:
     | { provider: "gemini"; apiKey: string; model: string; timeoutMs: number; thinkingLevel: "minimal" | "low" | "medium" | "high" }
     | { provider: "mock"; model: string; timeoutMs: number }
-    | { provider: "freellmapi"; baseUrl: string; apiKey: string; model: string; timeoutMs: number }
+    | { provider: "freellmapi"; baseUrl: string; apiKey: string; model: string; visionModel: string; timeoutMs: number }
     | null;
   maxUploadBytes: number;
 };
@@ -52,6 +56,8 @@ export function serverConfig(): ServerConfig {
     SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET || undefined,
     FREELLMAPI_BASE_URL: process.env.FREELLMAPI_BASE_URL || undefined,
     FREELLMAPI_MODEL: process.env.FREELLMAPI_MODEL || undefined,
+    FREELLMAPI_VISION_MODEL: process.env.FREELLMAPI_VISION_MODEL || undefined,
+    FREELLMAPI_TIMEOUT_MS: process.env.FREELLMAPI_TIMEOUT_MS || undefined,
   });
 
   const supabase =
@@ -76,7 +82,8 @@ export function serverConfig(): ServerConfig {
         baseUrl: env.FREELLMAPI_BASE_URL.replace(/\/+$/, ""),
         apiKey: env.FREELLMAPI_API_KEY,
         model: env.FREELLMAPI_MODEL,
-        timeoutMs: env.GEMINI_TIMEOUT_MS,
+        visionModel: env.FREELLMAPI_VISION_MODEL,
+        timeoutMs: env.FREELLMAPI_TIMEOUT_MS,
       };
     }
   } else if (env.GEMINI_API_KEY && env.GEMINI_PAID_TIER === "true") {
