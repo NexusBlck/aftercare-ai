@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   FileText,
   FlaskConical,
+  HeartHandshake,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -30,6 +31,7 @@ const NAV = [
   { href: "/recovery-plan", label: "Recovery plan", short: "Plan", icon: ListChecks, mobile: true },
   { href: "/medications", label: "Medications", short: "Meds", icon: Pill, mobile: true },
   { href: "/appointments", label: "Appointments", short: "Visits", icon: CalendarDays, mobile: true },
+  { href: "/care-team", label: "Care team", icon: HeartHandshake, mobile: false },
   { href: "/documents", label: "Documents", icon: FileText, mobile: false },
   { href: "/settings", label: "Settings", icon: Settings, mobile: false },
 ] as const;

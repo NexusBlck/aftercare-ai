@@ -19,7 +19,7 @@ export const POST = handle(async (request: Request) => {
   if (!supabase) throw new AppError("accounts_unconfigured", "Accounts are not configured on this server.", 503);
 
   const burstKey = `login-failures:${pseudonymize(ip)}`;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     const recent = recordFailure(burstKey, BURST_WINDOW_MS);
     securityEvent("login_failed", request, { account: pseudonymize(email), recent_failures: recent });
@@ -34,5 +34,11 @@ export const POST = handle(async (request: Request) => {
     throw new AppError("unauthorized", "That email and password do not match an account.", 401);
   }
   clearFailures(burstKey);
-  return ok({ ok: true });
+  // Clinic staff land in the clinic portal; everyone else in the patient app. RLS limits this to the caller's own rows.
+  const { count } = await supabase
+    .from("organization_memberships")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", data.user.id)
+    .eq("status", "active");
+  return ok({ ok: true, home: count ? "/clinic/dashboard" : "/dashboard" });
 });

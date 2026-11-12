@@ -22,6 +22,8 @@ export const SignupSchema = z.object({
     /** Promotional email opt-in: optional and separate. */
     marketing: z.boolean(),
   }),
+  /** Which welcome email to send: patients set up a recovery plan, clinic staff set up a clinic. */
+  audience: z.enum(["patient", "clinic"]).default("patient"),
 });
 
 export const ResetRequestSchema = z.object({ email: EmailSchema });

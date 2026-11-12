@@ -27,7 +27,26 @@ describe("database migration", () => {
     expect(sql).not.toMatch(/to\s+anon/i);
     const policies = sql.match(/create policy[\s\S]*?;/g) ?? [];
     expect(policies.length).toBeGreaterThan(5);
-    for (const p of policies) expect(p).toMatch(/auth\.uid\(\)|%I_own/);
+    // Clinic policies delegate to private.* helpers; each helper must itself be keyed on auth.uid().
+    const helpers = ["has_role", "is_staff", "is_reviewer", "is_patient", "patient_can_view_version", "patient_can_read_object"];
+    for (const p of policies) expect(p).toMatch(new RegExp(`auth\\.uid\\(\\)|%I_own|private\\.(${helpers.join("|")})\\(`));
+    for (const h of helpers) {
+      const body = new RegExp(`create or replace function private\\.${h}\\([\\s\\S]*?\\$\\$;`).exec(sql)?.[0] ?? "";
+      expect(body, h).toMatch(/auth\.uid\(\)|private\.has_role\(/);
+      expect(body, h).toMatch(/security definer set search_path = ''/);
+    }
+  });
+
+  it("clinic tables: RLS everywhere, no anonymous access, audit log not writable by users", () => {
+    for (const t of ["organizations", "organization_memberships", "clinic_patients", "plan_versions", "clinical_approvals", "patient_invitations", "audit_logs"]) {
+      expect(sql, t).toContain(`alter table public.${t} enable row level security;`);
+    }
+    expect(sql).toMatch(/revoke all on public\.organizations,[\s\S]*?from anon;/);
+    expect(sql).not.toMatch(/create policy \w+ on public\.audit_logs for (insert|update|delete|all)/);
+    expect(sql).not.toMatch(/create policy \w+ on public\.clinical_approvals for (insert|update|delete|all)/);
+    expect(sql).not.toMatch(/create policy \w+ on public\.organization_memberships for (insert|update|delete|all)/);
+    // Invitation tokens are stored only as SHA-256 hashes.
+    expect(sql).toMatch(/token_hash text not null unique check \(token_hash ~ '\^\[0-9a-f\]\{64\}\$'\)/);
   });
 
   it("checks parent ownership when child rows are written", () => {
