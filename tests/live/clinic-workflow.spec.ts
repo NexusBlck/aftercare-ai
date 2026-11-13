@@ -224,7 +224,8 @@ test.describe.serial("clinic portal — live signed-in workflow", () => {
 
     const page = await (await browserAs(browser, "clinician-a")).newPage();
     await page.goto(`/clinic/plans/${ids.planA}`);
-    await expect(page.getByText("Patient sees an approved version")).toBeVisible();
+    // First load of the plan page takes ~4–5 s against the remote test database.
+    await expect(page.getByText("Patient sees an approved version")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Start a revision" })).toBeVisible();
     await page.screenshot({ path: "test-results/live/clinician-plan-approved.png", fullPage: true });
     await page.goto("/clinic/dashboard");

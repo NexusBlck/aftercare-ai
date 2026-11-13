@@ -1,5 +1,5 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { AppError } from "@/lib/api/errors";
 
 export interface MfaState {
@@ -9,11 +9,16 @@ export interface MfaState {
   nextLevel: string | null;
 }
 
-/** Assurance level of the current session (decoded from the session; no network call). */
-export async function mfaState(supabase: SupabaseClient): Promise<MfaState> {
+/**
+ * Assurance level of the current session. `user` must come from a fresh auth.getUser() (as requireUser
+ * and sign-in provide): the copy of the user inside the session cookie can be out of date, e.g. after
+ * two-factor was turned on from another device, while the database always checks the live factors.
+ */
+export async function mfaState(supabase: SupabaseClient, user: User): Promise<MfaState> {
   const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (error) throw new AppError("unauthorized", "Your session has expired. Please sign in again.", 401);
-  return { currentLevel: data.currentLevel, nextLevel: data.nextLevel };
+  const hasVerifiedFactor = (user.factors ?? []).some((f) => f.status === "verified");
+  return { currentLevel: data.currentLevel, nextLevel: hasVerifiedFactor ? "aal2" : (data.currentLevel ?? "aal1") };
 }
 
 /** The account has a verified factor that this session has not completed. */

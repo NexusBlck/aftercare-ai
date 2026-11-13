@@ -43,5 +43,5 @@ export const POST = handle(async (request: Request) => {
     .eq("status", "active");
   const home = count ? "/clinic/dashboard" : "/dashboard";
   // Accounts with two-factor get a password-only (aal1) session; the code step upgrades it.
-  return ok({ ok: true, home, mfa_required: needsSecondStep(await mfaState(supabase)) });
+  return ok({ ok: true, home, mfa_required: needsSecondStep(await mfaState(supabase, data.user)) });
 });

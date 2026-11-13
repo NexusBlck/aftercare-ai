@@ -51,7 +51,7 @@ export async function requireClinic(permission?: Permission): Promise<ClinicCont
   const preferred = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
   const member = memberships.find((m) => m.organization_id === preferred) ?? memberships[0];
   const ctx: ClinicContext = { ...auth, memberships, member, orgId: member.organization_id };
-  const mfa = await mfaState(auth.supabase);
+  const mfa = await mfaState(auth.supabase, auth.user);
   if (needsSecondStep(mfa)) {
     throw new AppError("mfa_required", "Enter the code from your authenticator app to continue.", 401);
   }

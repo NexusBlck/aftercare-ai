@@ -135,4 +135,45 @@ test.describe.serial("two-factor authentication for clinic staff", () => {
     expect((await json(owner.ctx, "DELETE", "/api/auth/mfa", { factor_id: factors[0].id })).status).toBe(403);
     await owner.ctx.dispose();
   });
+
+  test("in the browser: sign-in asks for the code; a nurse sets up two-factor when the clinic requires it", async ({ browser }) => {
+    const context = await browser.newContext();
+    await context.addInitScript(() => localStorage.setItem("aftercare.cookie-notice", "1"));
+    const page = await context.newPage();
+
+    await page.goto("/login");
+    await page.getByRole("textbox", { name: "Email" }).fill(email("owner"));
+    await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page).toHaveURL(/\/security\/verify\?next=%2Fclinic%2Fdashboard/);
+    await page.getByLabel("6-digit code").fill("123456");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByText(/That code is not correct/)).toBeVisible();
+    await page.getByLabel("6-digit code").fill(await freshCode(secret));
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page).toHaveURL(/\/clinic\/dashboard/, { timeout: 15_000 });
+    await expect(page.getByText(`MFA Clinic ${RUN}`).first()).toBeVisible({ timeout: 15_000 });
+    await page.screenshot({ path: "test-results/live/mfa-owner-dashboard.png" });
+    await context.close();
+
+    const nurseContext = await browser.newContext();
+    await nurseContext.addInitScript(() => localStorage.setItem("aftercare.cookie-notice", "1"));
+    const nursePage = await nurseContext.newPage();
+    await nursePage.goto("/login");
+    await nursePage.getByRole("textbox", { name: "Email" }).fill(email("nurse"));
+    await nursePage.getByLabel("Password", { exact: true }).fill(PASSWORD);
+    await nursePage.getByRole("button", { name: "Sign in" }).click();
+    await expect(nursePage.getByText("Your clinic requires two-factor authentication.")).toBeVisible({ timeout: 15_000 });
+    await nursePage.getByRole("link", { name: "Set up two-factor" }).click();
+    await expect(nursePage).toHaveURL(/\/security\?next=/);
+    await nursePage.getByRole("button", { name: "Set up an authenticator app" }).click();
+    await expect(nursePage.getByRole("img", { name: "QR code for your authenticator app" })).toBeVisible();
+    await nursePage.screenshot({ path: "test-results/live/mfa-setup.png" });
+    const nurseSecret = (await nursePage.locator("code").innerText()).trim();
+    await nursePage.getByLabel("6-digit code").fill(totp(nurseSecret));
+    await nursePage.getByRole("button", { name: "Turn on" }).click();
+    await expect(nursePage).toHaveURL(/\/clinic\/dashboard/, { timeout: 15_000 });
+    await expect(nursePage.getByText(`MFA Clinic ${RUN}`).first()).toBeVisible({ timeout: 15_000 });
+    await nurseContext.close();
+  });
 });

@@ -13,7 +13,7 @@ import { MfaFactorSchema } from "@/schemas/auth";
  */
 export const GET = handle(async () => {
   const auth = await requireUser();
-  const [state, factors, memberships] = await Promise.all([mfaState(auth.supabase), verifiedTotpFactors(auth.supabase), loadMemberships(auth)]);
+  const [state, factors, memberships] = await Promise.all([mfaState(auth.supabase, auth.user), verifiedTotpFactors(auth.supabase), loadMemberships(auth)]);
   return ok({
     enabled: factors.length > 0,
     verified_this_session: state.currentLevel === "aal2",
@@ -29,7 +29,7 @@ export const GET = handle(async () => {
 export const POST = handle(async (request: Request) => {
   const { supabase, user } = await requireUser();
   await enforceRateLimit(request, "mfa-enroll", user.id, 10, 60 * 60_000);
-  const state = await mfaState(supabase);
+  const state = await mfaState(supabase, user);
   // Adding another factor to a protected account needs the existing one first.
   if (state.nextLevel === "aal2" && state.currentLevel !== "aal2") {
     throw new AppError("mfa_required", "Enter the code from your authenticator app to continue.", 401);
@@ -48,7 +48,7 @@ export const DELETE = handle(async (request: Request) => {
   const auth = await requireUser();
   await enforceRateLimit(request, "mfa-remove", auth.user.id, 10, 60 * 60_000);
   const { factor_id } = await parseJson(request, MfaFactorSchema);
-  const state = await mfaState(auth.supabase);
+  const state = await mfaState(auth.supabase, auth.user);
   if (state.currentLevel !== "aal2") {
     throw new AppError("mfa_required", "Enter the code from your authenticator app before turning two-factor off.", 401);
   }
