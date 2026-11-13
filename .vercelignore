@@ -1,0 +1,8 @@
+# Never upload local data or secrets with `vercel deploy`.
+backups/
+.env*.local
+.env
+qa/
+test-results/
+playwright-report/
+.next/
