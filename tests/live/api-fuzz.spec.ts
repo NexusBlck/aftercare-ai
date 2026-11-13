@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type APIRequestContext } from "@playwright/test";
@@ -16,7 +16,8 @@ const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 test.skip(!url || !anon || /qfpaoqacngcfstdchdqj/.test(url), "Needs a separate Supabase TEST project (never production).");
 
 const BASE = "http://localhost:3300";
-const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+// Unique per run; the synthetic passwords below derive from it, so use a CSPRNG.
+const RUN = `${Date.now().toString(36)}${crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
 const PASSWORD = `Fuzz-${RUN}-pw!`;
 
 interface Route {
@@ -28,10 +29,10 @@ function discoverRoutes(): Route[] {
   const root = join(process.cwd(), "src", "app", "api");
   const out: Route[] = [];
   const walk = (dir: string) => {
-    for (const name of readdirSync(dir)) {
-      const p = join(dir, name);
-      if (statSync(p).isDirectory()) walk(p);
-      else if (name === "route.ts") {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (entry.isFile() && entry.name === "route.ts") {
         const src = readFileSync(p, "utf8");
         const methods = [...src.matchAll(/export const (GET|POST|PUT|PATCH|DELETE)\b/g)].map((m) => m[1]);
         out.push({ path: "/api/" + relative(root, dir).replace(/\\/g, "/"), methods });
