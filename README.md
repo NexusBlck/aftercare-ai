@@ -8,7 +8,25 @@ UPLOAD → EXTRACT (Gemini) → VALIDATE (Zod + safety rules) → REVIEW → UND
 
 > **Educational prototype.** AFTERCARE AI organizes instructions a care team has already written. It does not diagnose or prescribe, it is not for emergencies, and it has no clinical validation or regulatory approval. All demo and test data is synthetic and belongs to a fictional patient.
 
-## What it does
+## Two interfaces, one backend
+
+| | Patient app (existing) | Clinic portal (`clinic-portal` branch, not yet deployed) |
+|---|---|---|
+| Who | A patient organizing their own discharge papers, or a patient invited by a clinic | Clinic owners, administrators, clinicians, nurses |
+| Entry | `/`, `/demo`, `/signup`, `/dashboard` … `/care-team` | `/clinic/register`, `/clinic/dashboard`, `/clinic/join` |
+| Key idea | The patient reviews their own documents | AI organizes documented instructions → **a clinician reviews and approves** → the patient sees only the approved version |
+
+Clinic portal features: clinic registration and onboarding, staff invitations and roles, patient directory with
+search and pagination, care episodes, private document upload, AI extraction with source provenance, clinical review
+queue with corrections, flags, attested approval and versioning, secure patient invitations (hashed one-time tokens +
+date-of-birth check), follow-up tracking (patient-reported vs verified), patient questions with an urgent-symptom
+screen, in-app notifications, an append-only audit log, and manual subscription plans with enforced limits.
+
+Docs: [ARCHITECTURE.md](ARCHITECTURE.md) · [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) · [SECURITY.md](SECURITY.md) ·
+[CLINICAL_SAFETY.md](CLINICAL_SAFETY.md) · [API_DOCUMENTATION.md](API_DOCUMENTATION.md) · [TESTING.md](TESTING.md) ·
+[DEPLOYMENT.md](DEPLOYMENT.md) · [PILOT_READINESS.md](PILOT_READINESS.md) · [PROGRESS.md](PROGRESS.md)
+
+## What it does (patient app)
 
 - **Upload**: PDF, JPG and PNG files up to 10 MB each, by drag-and-drop or file browser. It shows upload progress and lets you cancel. Files are checked by their actual bytes, not their name.
 - **AI extraction**: a server-side Gemini call with structured JSON output extracts encounter details, medications, wound care, activity, diet, follow-ups, warning signs, uncertainties and conflicts. Every item keeps its page number and the exact excerpt it came from.
@@ -95,10 +113,12 @@ src/
   lib/security/        file validation, storage paths, rate limiting
   lib/pdf/             recovery summary PDF (pdf-lib)
   lib/demo/            synthetic documents + sample plan
-  schemas/             Zod schemas (AI output, domain entities, request bodies)
-  services/            Supabase repository and route helpers
-supabase/migrations/   SQL schema, RLS, storage policies
-tests/                 unit, integration, e2e, ai, fixtures
+  lib/clinic/          clinic permissions, tenancy context, plan editing, DB error mapping, urgent screen
+  components/clinic/   clinic shell, review workspace, uploader; components/care-team/ approved-plan view
+  schemas/             Zod schemas (AI output, domain entities, request bodies, clinic requests)
+  services/            Supabase repository and route helpers (patient + clinic)
+supabase/migrations/   SQL schema, RLS, storage policies (0003 = multi-tenant clinic portal)
+tests/                 unit, integration, db (PGlite RLS tests), e2e, ai, fixtures
 ```
 
 CI (`.github/workflows/ci.yml`) runs lint, types, tests, Playwright with axe, Lighthouse and an OWASP ZAP baseline on every push. See `QA_REPORT.md`.

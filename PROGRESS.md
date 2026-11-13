@@ -1,5 +1,43 @@
 # Progress
 
+## Clinic portal (branch `clinic-portal`, 2026-11-13)
+
+Not pushed, not deployed, migration 0003 not applied to any Supabase project. All data synthetic.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Types | `next typegen && tsc --noEmit` | ✅ 0 errors |
+| Lint | `npx eslint src tests` | ✅ 0 problems |
+| Dependencies | `npm audit --omit=dev` | ✅ 0 vulnerabilities |
+| Unit + integration + DB | `npx vitest run` | ✅ 168 passed, 2 skipped (live Supabase RLS — no test project) |
+| DB security (PGlite, real migrations) | `npx vitest run tests/db` | ✅ 37 passed; mutation check confirmed the revocation test catches a removed status check |
+| Production build | `next build` | ✅ all routes compile (clinic + care-team pages included) |
+| E2E (desktop + mobile) | `npx playwright test` | ✅ 52 passed (incl. 6 new clinic tests) |
+
+Completed: multi-tenant schema + RLS + RPCs (0003), server-side tenancy/permissions, 40 new API routes (clinic, care-team, invitations, notifications),
+clinic portal UI (dashboard, patients, registration, patient record with uploads + AI extraction, review workspace,
+follow-ups, questions, staff, settings, subscription, audit), clinic registration, staff join, patient invitation,
+patient Care-team area, in-app notifications, docs (DATABASE_SCHEMA, SECURITY, CLINICAL_SAFETY, API_DOCUMENTATION,
+TESTING, DEPLOYMENT, PILOT_READINESS).
+
+Fixed along the way: the 0002 sign-up trigger failed when user metadata lacked `marketing_opt_in` (e.g. users created
+from the Supabase dashboard); fixed in 0003.
+
+### Live test project (2026-11-13, owner-approved)
+
+- Separate free Supabase project `aftercare-ai-test` (`lpnhqogpyamvbtsnsjxc`); migrations 0001–0003 applied
+  (29 tables, all RLS; 53 policies; private bucket; anon has no table access). Email confirmation off on that project only.
+- Vercel preview of `clinic-portal` with one-off overrides (test DB, test extractor, service-role key disabled, SMTP to
+  localhost): https://aftercare-hol1x0rnf-nexus-blck.vercel.app (Vercel-Authentication protected). Production project,
+  production env vars and shared preview env vars were not changed.
+- `npx playwright test --config playwright.live.config.ts`: ✅ **11 passed** — full signed-in workflow with seven synthetic
+  accounts (see TESTING.md). Found and fixed two Data API relationship defects in 0003; added code-only DB error logging.
+
+Not done / blocked: malware scanning, staff MFA, legal B2B terms, clinical safety sign-off, independent security review.
+See PILOT_READINESS.md.
+
+---
+
 Last updated: 2026-11-12. Status reflects commands actually run in this environment.
 
 ## Verification results

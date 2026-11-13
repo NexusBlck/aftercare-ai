@@ -12,6 +12,40 @@ Browser ──► Next.js pages (client components, static shells)
                                           └──► Gemini (@google/genai) ──► Zod ──► safety post-processing
 ```
 
+## Multi-tenant clinic portal (branch `clinic-portal`)
+
+```
+ Clinic staff (/clinic/*)                    Patient (/care-team, /invitation)
+        │  client pages + useApi()                 │
+        ▼                                          ▼
+ /api/clinic/* ── requireClinic(permission)   /api/care-team/*, /api/invitations/redeem
+        │   org = caller's active membership       │   requireUser()
+        │   (never from the request)               │
+        ▼                                          ▼
+ Supabase with the CALLER's session ──► RLS (private.is_staff / is_reviewer / is_patient …)
+        │                               SECURITY DEFINER RPCs for approvals, invitations, roles, versions
+        │                               triggers guard tenant columns, plan status and approved versions
+        ├──► Storage: clinic/{org}/{patient}/{uuid}.ext (staff of org; patient only if shared)
+        └──► Gemini pipeline (existing): extract → Zod → sanitize → applyExtraction() into a DRAFT plan version
+```
+
+- **Plan versions** store the same `PlanBundle` the patient app uses (`plan_versions.bundle`), so extraction, conflict
+  detection, provenance and editing logic are shared. Clinician edits go through `src/lib/clinic/plan-editing.ts`.
+- **Approval** is a database transition (`decide_plan_version`) available only to active clinical reviewers; it sets
+  `recovery_plans.approved_version_id`, which is the only version a patient can read.
+- **Patient integration** is additive: the existing patient app is unchanged; linked patients get a Care-team page that
+  renders approved versions read-only and records progress, attendance reports and questions.
+- Details: [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md), [SECURITY.md](SECURITY.md), [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+
+| Clinic layer | Location |
+|---|---|
+| Roles/permissions (mirrors DB) | `src/lib/clinic/permissions.ts` |
+| Tenancy context, RPC helper, audit events | `src/lib/clinic/server.ts` |
+| Clinician plan edits, approval readiness | `src/lib/clinic/plan-editing.ts` |
+| Clinic queries | `src/services/clinic-service.ts`, `src/services/clinic-documents.ts` |
+| Routes | `src/app/api/clinic/**`, `src/app/api/care-team/**`, `src/app/api/invitations/redeem`, `src/app/api/notifications/**` |
+| UI | `src/app/clinic/**`, `src/components/clinic/**`, `src/app/(app)/(shell)/care-team/**`, `src/app/invitation` |
+
 ## Layers
 
 | Layer | Location | Notes |

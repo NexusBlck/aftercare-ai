@@ -15,7 +15,7 @@ import { SignupSchema } from "@/schemas/auth";
  */
 export const POST = handle(async (request: Request) => {
   enforceRateLimit(request, "signup-ip", clientIp(request), 5, 60 * 60_000);
-  const { email, password, consents } = await parseJson(request, SignupSchema);
+  const { email, password, consents, audience } = await parseJson(request, SignupSchema);
   const supabase = await createServerSupabase();
   if (!supabase) throw new AppError("accounts_unconfigured", "Accounts are not configured on this server.", 503);
 
@@ -45,7 +45,7 @@ export const POST = handle(async (request: Request) => {
   // A brand-new account has an identity. Supabase returns none for an already-registered address
   // when confirmation is on, so no welcome email is sent and the reply reveals nothing.
   if (data.user && (data.user.identities?.length ?? 0) > 0) {
-    await sendEmail({ to: email, ...welcomeEmail({ appUrl: origin, marketingOptIn: consents.marketing }) });
+    await sendEmail({ to: email, ...welcomeEmail({ appUrl: origin, marketingOptIn: consents.marketing, audience }) });
   }
   return ok({ needsConfirmation: !data.session });
 });

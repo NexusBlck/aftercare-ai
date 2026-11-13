@@ -13,9 +13,35 @@ const MUTED = "#5b6475";
  * Welcome email sent right after sign-up. Transactional (it confirms an action the person took),
  * so it is sent regardless of the marketing preference, and it contains no health information.
  */
-export function welcomeEmail({ appUrl, marketingOptIn }: { appUrl: string; marketingOptIn: boolean }) {
+const COPY = {
+  patient: {
+    path: "/onboarding",
+    cta: "Set up my recovery plan",
+    intro: "Your account is ready. AFTERCARE AI turns the documents you bring home from hospital into a clear recovery plan that you check and follow.",
+    preheader: "Your account is ready. Turn your discharge papers into a plan you can follow.",
+    features: [
+      ["Upload your discharge papers", "PDFs or photos of your discharge summary, prescriptions and care sheets."],
+      ["Check what was found", "Every medicine and instruction links to the exact sentence it came from."],
+      ["Follow your plan", "A daily checklist, your medicines, appointments and warning signs in one place."],
+    ],
+  },
+  clinic: {
+    path: "/clinic/register",
+    cta: "Set up my clinic",
+    intro: "Your account is ready. Create your clinic workspace to prepare clinician-approved recovery plans your patients can follow.",
+    preheader: "Your account is ready. Set up your clinic workspace.",
+    features: [
+      ["Register patients and upload discharge documents", "Files are stored privately and visible only to your clinic."],
+      ["Review AI-organized drafts", "Every item links to its source text; nothing reaches a patient until a clinician approves it."],
+      ["Invite patients securely", "Patients see only the plan your clinician approved."],
+    ],
+  },
+} as const;
+
+export function welcomeEmail({ appUrl, marketingOptIn, audience = "patient" }: { appUrl: string; marketingOptIn: boolean; audience?: "patient" | "clinic" }) {
+  const copy = COPY[audience];
   const base = appUrl.replace(/\/$/, "");
-  const start = `${base}/onboarding`;
+  const start = `${base}${copy.path}`;
   const settings = `${base}/settings`;
   const privacy = `${base}/privacy`;
   const contact = LEGAL.contactEmail;
@@ -23,17 +49,13 @@ export function welcomeEmail({ appUrl, marketingOptIn }: { appUrl: string; marke
 
   const subject = "Welcome to AFTERCARE AI";
 
-  const features = [
-    ["Upload your discharge papers", "PDFs or photos of your discharge summary, prescriptions and care sheets."],
-    ["Check what was found", "Every medicine and instruction links to the exact sentence it came from."],
-    ["Follow your plan", "A daily checklist, your medicines, appointments and warning signs in one place."],
-  ];
+  const features = copy.features;
 
   const html = `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(subject)}</title></head>
 <body style="margin:0;padding:0;background:#f6f5f1;font-family:Arial,Helvetica,sans-serif;color:${NAVY};">
-  <div style="display:none;max-height:0;overflow:hidden;">Your account is ready. Turn your discharge papers into a plan you can follow.</div>
+  <div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(copy.preheader)}</div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f5f1;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e6e3dc;">
@@ -42,9 +64,9 @@ export function welcomeEmail({ appUrl, marketingOptIn }: { appUrl: string; marke
         </td></tr>
         <tr><td style="padding:32px 28px 8px;">
           <h1 style="margin:0 0 12px;font-size:26px;line-height:1.25;color:${NAVY};">Welcome to AFTERCARE AI</h1>
-          <p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:#2a3344;">Your account is ready. AFTERCARE AI turns the documents you bring home from hospital into a clear recovery plan that you check and follow.</p>
+          <p style="margin:0 0 20px;font-size:16px;line-height:1.6;color:#2a3344;">${escapeHtml(copy.intro)}</p>
           <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 28px;"><tr><td style="border-radius:10px;background:${NAVY};">
-            <a href="${escapeHtml(start)}" style="display:inline-block;padding:14px 24px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">Set up my recovery plan</a>
+            <a href="${escapeHtml(start)}" style="display:inline-block;padding:14px 24px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">${escapeHtml(copy.cta)}</a>
           </td></tr></table>
           ${features
             .map(
@@ -70,9 +92,9 @@ export function welcomeEmail({ appUrl, marketingOptIn }: { appUrl: string; marke
   const text = [
     "Welcome to AFTERCARE AI",
     "",
-    "Your account is ready. AFTERCARE AI turns the documents you bring home from hospital into a clear recovery plan that you check and follow.",
+    copy.intro,
     "",
-    `Set up my recovery plan: ${start}`,
+    `${copy.cta}: ${start}`,
     "",
     ...features.map(([t, b]) => `- ${t}: ${b}`),
     "",

@@ -10,6 +10,23 @@ import { requireUser } from "@/lib/supabase/server";
 export const DELETE = handle(async () => {
   const { supabase, user, bucket } = await requireUser();
 
+  // Deleting a clinic owner's account would leave the clinic (and its patients' records) with no one
+  // able to administer it. Nothing is deleted until ownership is resolved.
+  const { count: owned, error: ownerError } = await supabase
+    .from("organization_memberships")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("role", "owner")
+    .eq("status", "active");
+  if (ownerError) throw new AppError("database_error", "We could not check your clinic memberships.", 500, true);
+  if (owned) {
+    throw new AppError(
+      "conflict",
+      "You own a clinic on AFTERCARE AI. Contact support to transfer or close the clinic before deleting your account. Nothing was deleted.",
+      409,
+    );
+  }
+
   const { data: docs, error: listError } = await supabase.from("documents").select("file_path").eq("user_id", user.id);
   if (listError) throw new AppError("database_error", "We could not list your documents.", 500, true);
   const paths = (docs ?? []).map((d) => d.file_path as string | null).filter((p): p is string => !!p);

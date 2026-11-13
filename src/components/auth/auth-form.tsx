@@ -38,6 +38,17 @@ function ReasonAlert() {
   );
 }
 
+/** A new account opened from an invitation link returns to that invitation (token kept in sessionStorage). */
+function pendingInvitationPath(): string | null {
+  try {
+    if (sessionStorage.getItem("aftercare_patient_invite")) return "/invitation";
+    if (sessionStorage.getItem("aftercare_staff_invite")) return "/clinic/join";
+  } catch {
+    // storage unavailable
+  }
+  return null;
+}
+
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -71,8 +82,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       // Sign-in and sign-up run on the server, which sets HttpOnly session cookies; the browser
       // never handles tokens.
       if (mode === "login") {
-        await apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify(parsed.data) });
-        router.replace(safeNext(new URLSearchParams(window.location.search).get("next"), window.location.origin));
+        const res = await apiFetch<{ home?: string }>("/api/auth/login", { method: "POST", body: JSON.stringify(parsed.data) });
+        const next = new URLSearchParams(window.location.search).get("next");
+        router.replace(next ? safeNext(next, window.location.origin) : (pendingInvitationPath() ?? res.home ?? "/dashboard"));
         router.refresh();
       } else {
         const res = await apiFetch<{ needsConfirmation: boolean }>("/api/auth/signup", {
@@ -85,7 +97,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         if (res.needsConfirmation) {
           setInfo("Check your email for a confirmation link. It signs you in and takes you to set-up.");
         } else {
-          router.replace("/onboarding");
+          router.replace(pendingInvitationPath() ?? "/onboarding");
           router.refresh();
         }
       }

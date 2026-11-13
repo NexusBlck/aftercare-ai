@@ -54,3 +54,6 @@ next-env.d.ts
 
 # generated e2e browser state
 /tests/e2e/.auth/
+
+# local database backups (contain personal data)
+/backups/
