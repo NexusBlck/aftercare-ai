@@ -12,9 +12,9 @@ const BURST_LIMIT = 5;
 /** Server-side sign-in. Session cookies are set HttpOnly by the Supabase server client. */
 export const POST = handle(async (request: Request) => {
   const ip = clientIp(request);
-  enforceRateLimit(request, "login-ip", ip, 20, 10 * 60_000);
+  await enforceRateLimit(request, "login-ip", ip, 20, 10 * 60_000);
   const { email, password } = await parseJson(request, LoginSchema);
-  enforceRateLimit(request, "login-email", email, 10, 15 * 60_000);
+  await enforceRateLimit(request, "login-email", email, 10, 15 * 60_000);
 
   const supabase = await createServerSupabase();
   if (!supabase) throw new AppError("accounts_unconfigured", "Accounts are not configured on this server.", 503);

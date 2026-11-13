@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalLayout } from "@/components/legal/legal-layout";
 import { freeTierAi } from "@/lib/ai-disclosure";
+import { redisConfig } from "@/lib/security/rate-limit";
 
 export const metadata: Metadata = { title: "Subprocessors" };
 
@@ -57,8 +58,18 @@ function freeTierRows() {
   }));
 }
 
+/** Listed while the shared rate limiter (Upstash Redis) is configured. */
+const RATE_LIMIT_STORE = {
+  name: "Upstash, Inc.",
+  purpose: "Counting requests to stop abuse (rate limiting)",
+  data: "Request counters stored under one-way hashed identifiers that expire within an hour. No health information, IP addresses or email addresses are sent.",
+  location: "Upstash region chosen at set-up",
+  status: "Active",
+  terms: "https://upstash.com/trust/dpa.pdf",
+};
+
 export default function SubprocessorsPage() {
-  const rows = [...SUBPROCESSORS, ...freeTierRows()];
+  const rows = [...SUBPROCESSORS, ...freeTierRows(), ...(redisConfig() ? [RATE_LIMIT_STORE] : [])];
   return (
     <LegalLayout title="Subprocessors">
       <p>

@@ -16,7 +16,7 @@ const EXT = { "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png" 
  */
 export const POST = handle(async (request: Request) => {
   const ctx = await requireClinic("documents.upload");
-  enforceRateLimit(request, "clinic-upload", ctx.user.id, 60, 10 * 60_000);
+  await enforceRateLimit(request, "clinic-upload", ctx.user.id, 60, 10 * 60_000);
   const body = await parseJson(request, ClinicUploadSchema);
   const claim = checkFileClaims(body.filename, body.size, serverConfig().maxUploadBytes);
   if (!claim.ok) throw new AppError(claim.code, claim.message, 400);

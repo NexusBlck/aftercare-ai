@@ -37,7 +37,7 @@ Documented, not changed:
 | AUD-03 | Low (deployment-dependent) | Rate limits key on the first `X-Forwarded-For` address (`src/lib/security/audit-log.ts`). | Vercel overwrites this header with the real client IP, so it cannot be spoofed there. If hosted elsewhere, read the platform's trusted client-IP header instead. |
 | AUD-04 | Info | Production `HEAD /` responses omit the security headers (GET responses have the full set — verified). | Vercel edge behaviour; browsers use GET. No action. |
 | R-1 | Low | CSP allows `'unsafe-inline'` scripts (Nuclei `weak-csp-detect`). | Required by Next.js unless every page is rendered per request with a nonce, which conflicts with the static pages. Revisit if static rendering is dropped. |
-| R-2 | Medium | Rate limits are in-memory per server instance. | Documented since the hardening round; use a shared store (e.g. Upstash) before high traffic. |
+| R-2 | Medium → resolved when configured | Rate limits were in-memory per server instance. | Shared Upstash Redis limiter added (hashed keys, falls back to in-memory if unavailable); active once `UPSTASH_REDIS_REST_*` is set in production. |
 | R-3 | Medium | No malware scanning of uploads. | Files are type-checked by magic bytes, never executed or rendered server-side, stored privately. Add a scanner before real patient documents. |
 | R-4 | Low | Sign-up reveals that an email is registered (owner's choice). | Supabase's own sign-up API reveals it anyway while email confirmation is off. |
 | R-5 | Low | Rejected uploads by non-admin staff may leave an orphaned object in private storage. | Not readable by patients or other clinics; clean up periodically. |

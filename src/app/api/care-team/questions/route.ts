@@ -11,7 +11,7 @@ import { QuestionSchema } from "@/schemas/clinic";
  */
 export const POST = handle(async (request: Request) => {
   const auth = await requireUser();
-  enforceRateLimit(request, "patient-question", auth.user.id, 10, 60 * 60_000);
+  await enforceRateLimit(request, "patient-question", auth.user.id, 10, 60 * 60_000);
   const body = await parseJson(request, QuestionSchema);
   const urgent = hasUrgentKeywords(`${body.subject} ${body.body}`);
   const id = await rpc<string>(

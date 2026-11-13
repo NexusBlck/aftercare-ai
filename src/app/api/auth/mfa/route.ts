@@ -28,7 +28,7 @@ export const GET = handle(async () => {
  */
 export const POST = handle(async (request: Request) => {
   const { supabase, user } = await requireUser();
-  enforceRateLimit(request, "mfa-enroll", user.id, 10, 60 * 60_000);
+  await enforceRateLimit(request, "mfa-enroll", user.id, 10, 60 * 60_000);
   const state = await mfaState(supabase);
   // Adding another factor to a protected account needs the existing one first.
   if (state.nextLevel === "aal2" && state.currentLevel !== "aal2") {
@@ -46,7 +46,7 @@ export const POST = handle(async (request: Request) => {
 /** Turns off an authenticator app. Needs a two-factor session; refused while a clinic requires it. */
 export const DELETE = handle(async (request: Request) => {
   const auth = await requireUser();
-  enforceRateLimit(request, "mfa-remove", auth.user.id, 10, 60 * 60_000);
+  await enforceRateLimit(request, "mfa-remove", auth.user.id, 10, 60 * 60_000);
   const { factor_id } = await parseJson(request, MfaFactorSchema);
   const state = await mfaState(auth.supabase);
   if (state.currentLevel !== "aal2") {

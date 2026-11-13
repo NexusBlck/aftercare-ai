@@ -15,10 +15,10 @@ export const maxDuration = 300;
  */
 export const POST = handle(async (request: Request) => {
   requireAi();
-  const limit = rateLimit(`extract:${clientKey(request)}`, 8, 10 * 60_000);
+  const limit = await rateLimit(`extract:${clientKey(request)}`, 8, 10 * 60_000);
   if (!limit.ok) throw new AppError("rate_limited", `Too many documents processed. Try again in ${limit.retryAfterSec} seconds.`, 429, true);
   // Demo extraction is anonymous: an overall cap protects the shared AI quota from many visitors at once.
-  const overall = rateLimit("extract:all", 60, 10 * 60_000);
+  const overall = await rateLimit("extract:all", 60, 10 * 60_000);
   if (!overall.ok) throw new AppError("ai_rate_limited", "The demo is very busy right now. Please try again in a few minutes.", 429, true);
 
   const maxBytes = serverConfig().maxUploadBytes;

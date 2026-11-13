@@ -13,7 +13,7 @@ import { MfaCodeSchema } from "@/schemas/auth";
 export const POST = handle(async (request: Request) => {
   const { supabase, user } = await requireUser();
   // Six-digit codes are guessable; keep attempts low per account and per address.
-  enforceRateLimit(request, "mfa-verify", user.id, 8, 10 * 60_000);
+  await enforceRateLimit(request, "mfa-verify", user.id, 8, 10 * 60_000);
   const { code, factor_id } = await parseJson(request, MfaCodeSchema);
   const factorId = factor_id ?? (await verifiedTotpFactors(supabase))[0]?.id;
   if (!factorId) throw new AppError("invalid_request", "Two-factor authentication is not set up for this account.", 400);

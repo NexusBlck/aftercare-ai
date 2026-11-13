@@ -13,7 +13,7 @@ import { UploadRequestSchema } from "@/schemas/domain";
  */
 export const POST = handle(async (request: Request) => {
   const { supabase, user, bucket } = await requireUser();
-  const limit = rateLimit(`upload:${user.id}:${clientKey(request)}`, 30, 10 * 60_000);
+  const limit = await rateLimit(`upload:${user.id}:${clientKey(request)}`, 30, 10 * 60_000);
   if (!limit.ok) throw new AppError("rate_limited", `Too many uploads. Try again in ${limit.retryAfterSec} seconds.`, 429, true);
 
   const body = await parseJson(request, UploadRequestSchema);

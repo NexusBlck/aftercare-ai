@@ -14,7 +14,7 @@ import { getPatient } from "@/services/clinic-service";
 export const POST = handle(async (request: Request, ctx: RouteContext<"/api/clinic/patients/[id]/invitations">) => {
   const { id } = await ctx.params;
   const clinic = await requireClinic("invitations.manage");
-  enforceRateLimit(request, "patient-invite", clinic.user.id, 30, 60 * 60_000);
+  await enforceRateLimit(request, "patient-invite", clinic.user.id, 30, 60 * 60_000);
   const body = await parseOptionalJson(request, PatientInviteSchema);
   const patient = await getPatient(clinic, id);
   const rows = await rpc<Array<{ invitation_id: string; token: string; expires_at: string }>>(

@@ -22,7 +22,7 @@ function slugify(name: string): string {
 /** Creates a clinic. The caller becomes its owner, atomically, inside the database. */
 export const POST = handle(async (request: Request) => {
   const auth = await requireUser();
-  enforceRateLimit(request, "org-create", auth.user.id, 5, 60 * 60_000);
+  await enforceRateLimit(request, "org-create", auth.user.id, 5, 60 * 60_000);
   const body = await parseJson(request, CreateOrganizationSchema);
   const id = await rpc<string>(
     auth,

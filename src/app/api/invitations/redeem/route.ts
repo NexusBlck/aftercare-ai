@@ -22,8 +22,8 @@ const REASONS: Record<string, string> = {
  */
 export const POST = handle(async (request: Request) => {
   const auth = await requireUser();
-  enforceRateLimit(request, "invite-redeem-ip", clientIp(request), 20, 15 * 60_000);
-  enforceRateLimit(request, "invite-redeem-user", auth.user.id, 10, 15 * 60_000);
+  await enforceRateLimit(request, "invite-redeem-ip", clientIp(request), 20, 15 * 60_000);
+  await enforceRateLimit(request, "invite-redeem-user", auth.user.id, 10, 15 * 60_000);
   const { token, date_of_birth } = await parseJson(request, RedeemPatientInviteSchema);
   const result = await rpc<{ ok: boolean; reason?: string; patient_id?: string }>(
     auth,

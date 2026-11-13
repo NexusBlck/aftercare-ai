@@ -18,7 +18,7 @@ fuzzing, a pgTAP suite, AI safety evaluation and security CI — with no critica
 | Priority | Item |
 |---|---|
 | Critical blocker (before real patients) | Legal terms/DPA for clinics, clinical-safety sign-off, AI evaluation on de-identified real documents, independent penetration test (unchanged from PILOT_READINESS.md) |
-| High | Malware scanning for uploads (R-3); shared rate-limit store (R-2); staff MFA |
+| High | Malware scanning for uploads (R-3). Done since: staff two-factor (migration 0004); shared rate limiter (needs Upstash settings in production) |
 | Medium | Apply the updated migration `0003` to the test project and re-run the live workflow; apply `0002b` to production (owner action) |
 | Low | CSP `unsafe-inline` (R-1); clinic-registration layout shift (P-1); 401 console noise on public pages (P-2) |
 
