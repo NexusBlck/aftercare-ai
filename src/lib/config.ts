@@ -17,7 +17,15 @@ const EnvSchema = z.object({
   GEMINI_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(300_000).default(90_000),
   GEMINI_THINKING_LEVEL: z.enum(["minimal", "low", "medium", "high"]).default("low"),
   MAX_UPLOAD_MB: z.coerce.number().min(1).max(50).default(10),
-  AFTERCARE_AI_PROVIDER: z.enum(["gemini", "mock", "freellmapi", ""]).optional(),
+  AFTERCARE_AI_PROVIDER: z.enum(["gemini", "mock", "freellmapi", "free", ""]).optional(),
+  /** "free": providers' free tiers called directly from the server. Keys are server-only (never sent to browsers). */
+  GROQ_API_KEY: z.string().optional(),
+  GOOGLE_AI_STUDIO_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  /** Ordered "endpoint:model" preference for text; entries whose endpoint has no key are skipped. */
+  FREE_AI_MODELS: z.string().min(1).max(500).default("groq:openai/gpt-oss-120b,google:gemini-3.1-flash-lite,openrouter:google/gemma-4-31b-it:free,openrouter:openrouter/free"),
+  /** Same, for photos: image-capable models only. */
+  FREE_AI_VISION_MODELS: z.string().min(1).max(500).default("google:gemini-3.1-flash-lite,openrouter:google/gemma-4-31b-it:free,openrouter:openrouter/free"),
   /** Must be "true": confirms the key is on Gemini's paid tier, where content is not used for training. */
   GEMINI_PAID_TIER: z.string().optional(),
   /** FreeLLMAPI router (https://github.com/tashfeenahmed/freellmapi): OpenAI-compatible base URL ending in /v1. */
@@ -32,12 +40,31 @@ const EnvSchema = z.object({
   FREELLMAPI_TIMEOUT_MS: z.coerce.number().int().min(10_000).max(150_000).default(90_000),
 });
 
+/** OpenAI-compatible endpoints tried in a preference order ("endpoint:model" entries). */
+export interface RouterAiConfig {
+  provider: "freellmapi" | "free";
+  endpoints: Record<string, { baseUrl: string; apiKey: string }>;
+  /** Endpoint used for entries without a known "endpoint:" prefix. */
+  defaultEndpoint: string;
+  /** Comma-separated preference lists. `model` is also what the health endpoint reports. */
+  model: string;
+  visionModel: string;
+  timeoutMs: number;
+}
+
+/** Free-tier endpoints the "free" provider can call directly (all OpenAI-compatible). */
+export const FREE_ENDPOINTS = {
+  groq: { baseUrl: "https://api.groq.com/openai/v1", env: "GROQ_API_KEY" },
+  google: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", env: "GOOGLE_AI_STUDIO_API_KEY" },
+  openrouter: { baseUrl: "https://openrouter.ai/api/v1", env: "OPENROUTER_API_KEY" },
+} as const;
+
 export type ServerConfig = {
   supabase: { url: string; anonKey: string; serviceRoleKey: string | null; bucket: string } | null;
   ai:
     | { provider: "gemini"; apiKey: string; model: string; timeoutMs: number; thinkingLevel: "minimal" | "low" | "medium" | "high" }
     | { provider: "mock"; model: string; timeoutMs: number }
-    | { provider: "freellmapi"; baseUrl: string; apiKey: string; model: string; visionModel: string; timeoutMs: number }
+    | RouterAiConfig
     | null;
   maxUploadBytes: number;
 };
@@ -58,6 +85,8 @@ export function serverConfig(): ServerConfig {
     FREELLMAPI_MODEL: process.env.FREELLMAPI_MODEL || undefined,
     FREELLMAPI_VISION_MODEL: process.env.FREELLMAPI_VISION_MODEL || undefined,
     FREELLMAPI_TIMEOUT_MS: process.env.FREELLMAPI_TIMEOUT_MS || undefined,
+    FREE_AI_MODELS: process.env.FREE_AI_MODELS || undefined,
+    FREE_AI_VISION_MODELS: process.env.FREE_AI_VISION_MODELS || undefined,
   });
 
   const supabase =
@@ -79,10 +108,27 @@ export function serverConfig(): ServerConfig {
     if (env.FREELLMAPI_BASE_URL && env.FREELLMAPI_API_KEY) {
       ai = {
         provider: "freellmapi",
-        baseUrl: env.FREELLMAPI_BASE_URL.replace(/\/+$/, ""),
-        apiKey: env.FREELLMAPI_API_KEY,
+        endpoints: { freellmapi: { baseUrl: env.FREELLMAPI_BASE_URL.replace(/\/+$/, ""), apiKey: env.FREELLMAPI_API_KEY } },
+        defaultEndpoint: "freellmapi",
         model: env.FREELLMAPI_MODEL,
         visionModel: env.FREELLMAPI_VISION_MODEL,
+        timeoutMs: env.FREELLMAPI_TIMEOUT_MS,
+      };
+    }
+  } else if (env.AFTERCARE_AI_PROVIDER === "free") {
+    // Free tiers called directly; disclosed on the Privacy and Subprocessors pages while enabled.
+    const endpoints: RouterAiConfig["endpoints"] = {};
+    for (const [name, def] of Object.entries(FREE_ENDPOINTS)) {
+      const key = env[def.env]?.trim();
+      if (key) endpoints[name] = { baseUrl: def.baseUrl, apiKey: key };
+    }
+    if (Object.keys(endpoints).length > 0) {
+      ai = {
+        provider: "free",
+        endpoints,
+        defaultEndpoint: Object.keys(endpoints)[0],
+        model: env.FREE_AI_MODELS,
+        visionModel: env.FREE_AI_VISION_MODELS,
         timeoutMs: env.FREELLMAPI_TIMEOUT_MS,
       };
     }

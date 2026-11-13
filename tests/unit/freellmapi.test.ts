@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { freeTierAiEnabled } from "@/lib/ai-disclosure";
+import { freeTierAi, freeTierAiEnabled } from "@/lib/ai-disclosure";
 import { buildSyntheticDocuments } from "@/lib/demo/synthetic-documents";
 import { chatJson, extractJsonText } from "@/lib/llm/openai-compatible";
 import { formatPages, pdfToText } from "@/lib/llm/pdf-text";
@@ -163,7 +163,64 @@ describe("extraction through the router", () => {
   });
 });
 
+describe("direct free-tier providers (AFTERCARE_AI_PROVIDER=free)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  async function freeMode(keys: Record<string, string>, fetchMock: ReturnType<typeof vi.fn>) {
+    vi.stubEnv("AFTERCARE_AI_PROVIDER", "free");
+    for (const k of ["GROQ_API_KEY", "GOOGLE_AI_STUDIO_API_KEY", "OPENROUTER_API_KEY"]) vi.stubEnv(k, keys[k] ?? "");
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+    const config = await import("@/lib/config");
+    return { pipeline: await import("@/lib/gemini/pipeline"), config };
+  }
+
+  it("calls each provider's own endpoint with its own key, and skips providers without a key", async () => {
+    const answer = buildSyntheticDocuments()["clear-discharge-summary"].extraction;
+    const fetchMock = vi.fn().mockResolvedValueOnce(reply("bad key", { status: 401 })).mockResolvedValueOnce(reply(JSON.stringify(answer)));
+    const { pipeline, config } = await freeMode({ GROQ_API_KEY: "gsk_test", GOOGLE_AI_STUDIO_API_KEY: "google_test" }, fetchMock);
+    const ai = config.serverConfig().ai;
+    expect(ai?.provider).toBe("free");
+
+    const result = await pipeline.extractDocument(fixture("synthetic-discharge-summary.pdf"), "application/pdf");
+    const calls = fetchMock.mock.calls as unknown as Array<[string, RequestInit]>;
+    expect(calls[0][0]).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect((calls[0][1].headers as Record<string, string>).Authorization).toBe("Bearer gsk_test");
+    expect(JSON.parse(calls[0][1].body as string).model).toBe("openai/gpt-oss-120b");
+    // Groq rejected its key, so the next provider (Google) answered; OpenRouter has no key and is never called.
+    expect(calls[1][0]).toBe("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions");
+    expect((calls[1][1].headers as Record<string, string>).Authorization).toBe("Bearer google_test");
+    expect(calls).toHaveLength(2);
+    expect(result).toMatchObject({ provider: "free", model: "free:google/gemini-3.1-flash-lite" });
+  });
+
+  it("resolves endpoint:model entries, keeping model ids that contain colons", async () => {
+    const { pipeline } = await freeMode({ OPENROUTER_API_KEY: "or_test" }, vi.fn());
+    const targets = pipeline.resolveTargets(
+      { endpoints: { openrouter: { baseUrl: "https://openrouter.ai/api/v1", apiKey: "or_test" } }, defaultEndpoint: "openrouter" },
+      "groq:openai/gpt-oss-120b, openrouter:google/gemma-4-31b-it:free",
+    );
+    expect(targets.map((t) => [t.endpoint, t.model])).toEqual([["openrouter", "google/gemma-4-31b-it:free"]]);
+  });
+
+  it("is off when no provider key is set", async () => {
+    const { config } = await freeMode({}, vi.fn());
+    expect(config.serverConfig().ai).toBeNull();
+  });
+});
+
 describe("legal disclosure follows configuration", () => {
+  it("names exactly the direct providers that have keys", () => {
+    const ai = freeTierAi({ AFTERCARE_AI_PROVIDER: "free", GROQ_API_KEY: "x", OPENROUTER_API_KEY: "y" });
+    expect(ai?.mode).toBe("free");
+    expect(ai?.providers.map((p) => p.name)).toEqual(["Groq, Inc. (free tier)", "OpenRouter, Inc. (free models) and the model hosts it routes to"]);
+    expect(freeTierAi({ AFTERCARE_AI_PROVIDER: "free" })).toBeNull();
+  });
+
   it("is on only when FreeLLMAPI is fully configured", () => {
     expect(freeTierAiEnabled({})).toBe(false);
     expect(freeTierAiEnabled({ AFTERCARE_AI_PROVIDER: "freellmapi" })).toBe(false);

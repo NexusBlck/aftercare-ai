@@ -18,6 +18,8 @@ export interface ChatJsonOptions {
   timeoutMs: number;
   maxRetries?: number;
   fetchImpl?: typeof fetch;
+  /** Named in error messages; omitted for the FreeLLMAPI router. */
+  service?: string;
 }
 
 export interface ChatJsonResult {
@@ -39,9 +41,9 @@ export function extractJsonText(raw: string): string {
   return start >= 0 && end > start ? body.slice(start, end + 1) : body;
 }
 
-function mapStatus(status: number, code: string | undefined): AppError {
+function mapStatus(status: number, code: string | undefined, service?: string): AppError {
   if (status === 429) return new AppError("ai_rate_limited", "All free AI providers are busy or over their limits right now. Please wait a minute and try again.", 429, true);
-  if (status === 401 || status === 403) return new AppError("ai_unconfigured", "The AI router rejected the server's credentials. The administrator needs to check FREELLMAPI_API_KEY.", 503);
+  if (status === 401 || status === 403) return new AppError("ai_unconfigured", service ? `${service} rejected the server's API key. The administrator needs to check it.` : "The AI router rejected the server's credentials. The administrator needs to check FREELLMAPI_API_KEY.", 503);
   if (status === 422 && code === "no_vision_model") {
     return new AppError("ai_unavailable", "No image-capable AI model is enabled in the AI router, so photos cannot be read. Upload a text PDF, or enable a vision model in FreeLLMAPI.", 422);
   }
@@ -78,7 +80,7 @@ export async function chatJson(opts: ChatJsonOptions): Promise<ChatJsonResult> {
         throw new AppError("ai_timeout", "The AI service took too long to read this document. Try again, or try a smaller or clearer file.", 504, true);
       }
       if (attempt < maxRetries) continue;
-      throw new AppError("ai_unavailable", "The AI router could not be reached. The administrator needs to check that FreeLLMAPI is running.", 503, true);
+      throw new AppError("ai_unavailable", opts.service ? `${opts.service} could not be reached.` : "The AI router could not be reached. The administrator needs to check that FreeLLMAPI is running.", 503, true);
     }
     clearTimeout(timer);
 
@@ -94,7 +96,7 @@ export async function chatJson(opts: ChatJsonOptions): Promise<ChatJsonResult> {
         await new Promise((r) => setTimeout(r, 1500));
         continue;
       }
-      throw mapStatus(response.status, code);
+      throw mapStatus(response.status, code, opts.service);
     }
 
     let data: { choices?: Array<{ message?: { content?: string | null }; finish_reason?: string }> };

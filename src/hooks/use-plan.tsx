@@ -11,7 +11,7 @@ import type { Language, PlanBundle } from "@/schemas/domain";
 
 export interface ServerStatus {
   accounts: boolean;
-  ai: "gemini" | "mock" | "freellmapi" | "unconfigured";
+  ai: "gemini" | "mock" | "freellmapi" | "free" | "unconfigured";
   model: string | null;
   maxUploadMb: number;
 }

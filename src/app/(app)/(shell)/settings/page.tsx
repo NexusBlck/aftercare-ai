@@ -150,6 +150,8 @@ export default function SettingsPage() {
                   ? `Google Gemini (${server.model})`
                   : server.ai === "freellmapi"
                     ? "free-tier AI models chosen per request by FreeLLMAPI (see the Privacy policy)"
+                    : server.ai === "free"
+                      ? "free tiers of Groq, Google AI Studio and OpenRouter, in a fallback order (see the Privacy policy)"
                     : server.ai === "mock"
                       ? "deterministic test extractor (not AI)"
                       : "not configured"}
