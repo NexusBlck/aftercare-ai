@@ -25,6 +25,7 @@ export type ApiErrorCode =
   | "plan_limit_reached"
   | "invitation_invalid"
   | "pdf_failed"
+  | "unsafe_file"
   | "mfa_required"
   | "mfa_setup_required"
   | "mfa_invalid_code"

@@ -83,9 +83,12 @@ verbatim excerpt. A detection adds an open flag that blocks approval until a cli
 
 ## Known gaps (see PILOT_READINESS.md)
 
-- **No malware scanning** of uploads (no scanning service is configured). Files are type-checked by magic bytes and
-  never executed or rendered server-side, but a scanner should be added before real patient documents are stored.
-- In-memory rate limits are per server instance (not shared across Vercel instances).
+- **Built-in malware check, no signature antivirus.** Uploads are type-checked by magic bytes and then refused if they
+  carry what malware needs: PDF scripts, launch/auto-run actions, embedded files, data-submitting forms, rich media,
+  encryption; images with broken structure or hidden programs, archives or scripts (`src/lib/security/malware-scan.ts`).
+  Files never leave the server for this and are never executed or rendered server-side. Known-virus signature scanning
+  would need a third-party service (owner decision: not now).
+- Rate limits are shared across instances only when Upstash Redis is configured; otherwise per instance.
 - No independent penetration test or security review of the clinic portal.
 - Rejected uploads by non-admin staff may leave an orphaned object in private storage (not readable by patients).
 - MFA for staff accounts is not enforced.

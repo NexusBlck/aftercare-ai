@@ -38,7 +38,7 @@ Documented, not changed:
 | AUD-04 | Info | Production `HEAD /` responses omit the security headers (GET responses have the full set — verified). | Vercel edge behaviour; browsers use GET. No action. |
 | R-1 | Low | CSP allows `'unsafe-inline'` scripts (Nuclei `weak-csp-detect`). | Required by Next.js unless every page is rendered per request with a nonce, which conflicts with the static pages. Revisit if static rendering is dropped. |
 | R-2 | Medium → resolved when configured | Rate limits were in-memory per server instance. | Shared Upstash Redis limiter added (hashed keys, falls back to in-memory if unavailable); active once `UPSTASH_REDIS_REST_*` is set in production. |
-| R-3 | Medium | No malware scanning of uploads. | Files are type-checked by magic bytes, never executed or rendered server-side, stored privately. Add a scanner before real patient documents. |
+| R-3 | Medium → Low | No malware scanning of uploads. | Built-in check added: active content in PDFs (scripts, launch actions, embedded files, encryption) and hidden payloads in images are refused before a file is accepted. Signature antivirus deliberately not added (would send patient documents to a third party). |
 | R-4 | Low | Sign-up reveals that an email is registered (owner's choice). | Supabase's own sign-up API reveals it anyway while email confirmation is off. |
 | R-5 | Low | Rejected uploads by non-admin staff may leave an orphaned object in private storage. | Not readable by patients or other clinics; clean up periodically. |
 

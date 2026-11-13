@@ -5,6 +5,7 @@ import { serverConfig } from "@/lib/config";
 import { extractDocument, requireAi } from "@/lib/gemini/pipeline";
 import { securityEvent } from "@/lib/security/audit-log";
 import { checkFileContent } from "@/lib/security/file-validation";
+import { scanUpload } from "@/lib/security/malware-scan";
 import { clientKey, rateLimit } from "@/lib/security/rate-limit";
 
 export const maxDuration = 300;
@@ -39,6 +40,11 @@ export const POST = handle(async (request: Request) => {
   if (!check.ok) {
     securityEvent("upload_rejected", request, { reason: check.code });
     throw new AppError(check.code, check.message, 400);
+  }
+  const scan = await scanUpload(bytes, check.mime);
+  if (!scan.ok) {
+    securityEvent("upload_rejected", request, { reason: scan.reason });
+    throw new AppError("unsafe_file", scan.message, 400);
   }
 
   return ndjsonStream(async (emit) => {

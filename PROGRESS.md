@@ -33,7 +33,7 @@ from the Supabase dashboard); fixed in 0003.
 - `npx playwright test --config playwright.live.config.ts`: ✅ **11 passed** — full signed-in workflow with seven synthetic
   accounts (see TESTING.md). Found and fixed two Data API relationship defects in 0003; added code-only DB error logging.
 
-Not done / blocked: malware scanning, staff MFA, legal B2B terms, clinical safety sign-off, independent security review.
+Not done / blocked: legal B2B terms, clinical safety sign-off, independent security review.
 See PILOT_READINESS.md.
 
 ---
