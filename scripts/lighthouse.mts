@@ -17,6 +17,8 @@ const PAGES: Array<[string, string]> = [
   ["home", "/"],
   ["login", "/login"],
   ["onboarding", "/onboarding?demo=1"],
+  ["clinic-register", "/clinic/register"],
+  ["invitation", "/invitation"],
 ];
 const PORT = 9333;
 

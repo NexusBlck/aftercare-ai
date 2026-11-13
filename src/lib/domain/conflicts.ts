@@ -73,6 +73,40 @@ function followUpConflicts(bundle: PlanBundle): RuleConflict[] {
   return conflicts;
 }
 
+/**
+ * Activity topics where a restriction and a permission can contradict each other ("avoid lifting over
+ * 5 kg for 6 weeks" vs "return to weight training after 2 weeks"). Deliberately broad: a false alarm
+ * only asks the care team to confirm; a missed contradiction could harm recovery.
+ */
+const ACTIVITY_TOPICS: Array<{ topic: string; pattern: RegExp }> = [
+  { topic: "lifting and strenuous activity", pattern: /\b(lift\w*|heav\w*|weights?|weight[- ]training|gym|strain\w*|carry\w*)\b/i },
+  { topic: "driving", pattern: /\b(driv\w*|car)\b/i },
+  { topic: "bathing and swimming", pattern: /\b(bath\w*|swim\w*|soak\w*|pool)\b/i },
+  { topic: "exercise and sport", pattern: /\b(exercis\w*|sports?|run\w*|jog\w*|cycl\w*|football|cricket)\b/i },
+  { topic: "sexual activity", pattern: /\b(sex\w*|intercourse)\b/i },
+];
+
+function activityConflicts(bundle: PlanBundle): RuleConflict[] {
+  const activity = bundle.tasks.filter((t) => t.category === "activity");
+  const conflicts: RuleConflict[] = [];
+  for (const { topic, pattern } of ACTIVITY_TOPICS) {
+    const restrictions = activity.filter((t) => t.kind === "restriction" && pattern.test(t.instruction));
+    const permissions = activity.filter((t) => t.kind === "permitted" && pattern.test(t.instruction));
+    if (restrictions.length === 0 || permissions.length === 0) continue;
+    const group = [...restrictions, ...permissions];
+    const ids = group.map((t) => t.id).sort();
+    conflicts.push({
+      rule_key: `auto:activity:${topic.split(" ")[0]}:${ids.join(",")}`,
+      category: "instruction",
+      description: `The activity instructions about ${topic} may contradict each other (one restricts it, another allows it). Do not choose yourself — confirm with your care team which applies and when.`,
+      related_ids: ids,
+      excerpts: group.map((t) => t.source_excerpt).filter((e): e is string => !!e),
+      document_id: null,
+    });
+  }
+  return conflicts;
+}
+
 function nextStatus(current: VerificationStatus, inOpenConflict: boolean): VerificationStatus {
   if (inOpenConflict) {
     return current === "needs_clinician_clarification" ? current : "conflicting";
@@ -81,7 +115,7 @@ function nextStatus(current: VerificationStatus, inOpenConflict: boolean): Verif
 }
 
 export function detectConflicts(bundle: PlanBundle, ctx: DomainContext): PlanBundle {
-  const found = [...medicationConflicts(bundle.medications), ...followUpConflicts(bundle)];
+  const found = [...medicationConflicts(bundle.medications), ...followUpConflicts(bundle), ...activityConflicts(bundle)];
   const foundKeys = new Set(found.map((c) => c.rule_key));
 
   const keptFlags = bundle.flags.filter((f) => f.rule_key === null || foundKeys.has(f.rule_key));

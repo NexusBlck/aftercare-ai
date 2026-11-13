@@ -19,6 +19,7 @@ EXTRACTION RULES:
 10. document_type: classify the document. Use "unknown" if you cannot tell; use "other" for a medical document that fits no category. has_clinical_content is false when the document contains no patient care instructions or clinical details.
 11. Do not provide advice, opinions, diagnoses or recommendations anywhere in the output.`;
 
+// nosemgrep: node_username -- matches the word "patient" in prompt text; there is no credential here
 export const EXTRACTION_USER_PROMPT =
   "Transcribe the attached patient document into the JSON schema, following every rule. Return only JSON.";
 

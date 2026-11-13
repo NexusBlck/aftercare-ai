@@ -151,7 +151,9 @@ create table public.clinic_patients (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (id, organization_id),
-  check ((user_id is null) = (linked_at is null))
+  -- A linked account always has a link time. The reverse is not required: when a patient deletes
+  -- their account, user_id becomes NULL (ON DELETE SET NULL) and linked_at remains as history.
+  check (user_id is null or linked_at is not null)
 );
 create unique index clinic_patients_mrn on public.clinic_patients (organization_id, mrn) where mrn is not null;
 create unique index clinic_patients_user on public.clinic_patients (organization_id, user_id) where user_id is not null;
@@ -238,6 +240,8 @@ create table public.plan_versions (
   status text not null default 'draft' check (status in (
     'draft', 'pending_review', 'changes_requested', 'approved', 'rejected', 'superseded')),
   based_on_version_id uuid references public.plan_versions (id) on delete set null,
+  -- Who last changed the content; set by trigger, so direct API writes are attributed too.
+  last_edited_by uuid references auth.users (id) on delete set null,
   created_by uuid references auth.users (id) on delete set null,
   submitted_by uuid references auth.users (id) on delete set null,
   submitted_at timestamptz,
@@ -376,7 +380,8 @@ create table public.notifications (
     'question_submitted', 'question_responded', 'staff_invitation')),
   -- Previews never contain medical details: generic title + a link into the app.
   title text not null check (char_length(title) <= 140),
-  link text check (link is null or link ~ '^/[A-Za-z0-9/_\-?=&#.]*$'),
+  -- Same-site paths only: "/x" yes, "//host" (protocol-relative, off-site) no.
+  link text check (link is null or link ~ '^/(?!/)[A-Za-z0-9/_\-?=&#.]*$'),
   channel text not null default 'in_app' check (channel in ('in_app', 'email', 'sms')),
   delivery_status text not null default 'delivered' check (delivery_status in ('pending', 'delivered', 'failed', 'not_configured')),
   read_at timestamptz,
@@ -607,7 +612,8 @@ begin
     if new.status <> old.status or new.organization_id <> old.organization_id or new.plan_id <> old.plan_id
        or new.version <> old.version or new.created_by is distinct from old.created_by
        or new.submitted_by is distinct from old.submitted_by or new.submitted_at is distinct from old.submitted_at
-       or new.decided_at is distinct from old.decided_at or new.based_on_version_id is distinct from old.based_on_version_id then
+       or new.decided_at is distinct from old.decided_at or new.based_on_version_id is distinct from old.based_on_version_id
+       or new.last_edited_by is distinct from old.last_edited_by then
       raise exception 'immutable_column' using errcode = 'P0001';
     end if;
     if old.status not in ('draft', 'changes_requested') then
@@ -619,6 +625,32 @@ begin
   return new;
 end $$;
 create trigger plan_versions_guard before update on public.plan_versions for each row execute function private.guard_plan_version();
+
+-- Every content change to a draft is attributed and audited in the database, whichever path wrote it
+-- (the API, AI processing, or a direct Data API call by any staff member).
+create or replace function private.track_plan_edit() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.bundle is distinct from old.bundle then
+    new.last_edited_by := auth.uid();
+    perform private.audit(new.organization_id, 'plan.content_changed', 'plan_version', new.id::text,
+      jsonb_build_object('version', new.version, 'role', (select m.role from public.organization_memberships m
+                                                          where m.organization_id = new.organization_id and m.user_id = auth.uid())));
+  end if;
+  -- Forging last_edited_by is refused by private.guard_plan_version, which runs first, as the caller.
+  return new;
+end $$;
+revoke all on function private.track_plan_edit() from public;
+create trigger plan_versions_track_edit before update on public.plan_versions for each row execute function private.track_plan_edit();
+
+-- Retention: clinic uploads that never completed are removed after 24 hours (extends 0002's job).
+create or replace function public.run_retention() returns void
+language sql security definer set search_path = public as $$
+  delete from public.extraction_runs where started_at < now() - interval '90 days';
+  delete from public.documents where processing_status = 'uploading' and created_at < now() - interval '24 hours';
+  delete from public.clinic_documents where processing_status = 'uploading' and created_at < now() - interval '24 hours';
+$$;
+revoke all on function public.run_retention() from public, anon, authenticated;
 
 create or replace function private.guard_recovery_plan() returns trigger
 language plpgsql set search_path = '' as $$

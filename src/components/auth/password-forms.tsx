@@ -74,6 +74,7 @@ export function NewPasswordForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8 || password.length > 72) return setError("Use between 8 and 72 characters.");
+    // nosemgrep: node_timing_attack -- compares two fields the user just typed, in their own browser; no secret involved
     if (password !== confirm) return setError("The two passwords do not match.");
     setBusy(true);
     setError(null);

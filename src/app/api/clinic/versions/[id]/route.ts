@@ -1,7 +1,7 @@
 import { AppError } from "@/lib/api/errors";
 import { handle, ok, parseJson } from "@/lib/api/route-utils";
 import { applyVersionEdit, approvalReadiness, VersionEditSchema } from "@/lib/clinic/plan-editing";
-import { logClinicEvent, requireClinic } from "@/lib/clinic/server";
+import { requireClinic } from "@/lib/clinic/server";
 import { defaultContext } from "@/lib/domain/context";
 import { z } from "zod";
 import { getVersion, saveVersionBundle } from "@/services/clinic-service";
@@ -25,6 +25,6 @@ export const PATCH = handle(async (request: Request, ctx: RouteContext<"/api/cli
   }
   const next = applyVersionEdit(version.bundle, edit, defaultContext());
   const saved = next === version.bundle ? version : await saveVersionBundle(clinic, version, next);
-  await logClinicEvent(clinic, "plan.edited", "plan_version", id, { op: edit.op, kind: "kind" in edit ? edit.kind : null });
+  // The database audits every content change (plan.content_changed), whichever path wrote it.
   return ok({ version: saved, readiness: approvalReadiness(saved.bundle) });
 });

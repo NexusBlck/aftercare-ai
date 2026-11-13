@@ -139,3 +139,21 @@ export function nameAppearsInExcerpt(name: string, excerpt: string | null): bool
 export function truncate(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 }
+
+const COMMON_WORDS = new Set([
+  "with", "without", "after", "before", "during", "daily", "every", "each", "take", "tablet", "tablets", "capsule", "capsules",
+  "days", "weeks", "months", "hours", "times", "once", "twice", "three", "four", "when", "required", "needed", "food", "meals",
+  "mouth", "orally", "oral", "this", "that", "then", "into", "from", "your", "until", "while", "both", "only", "more", "than",
+]);
+
+/**
+ * Content words in `value` (4+ letters, not common dosing words) that do not appear in `excerpt`.
+ * A transcribed field reuses the document's wording; several unexplained words mean the model wrote
+ * something of its own (commentary, guesses) rather than copying the source.
+ */
+export function wordsMissingFromExcerpt(value: string | null, excerpt: string | null): string[] {
+  if (!value || !excerpt) return [];
+  const source = excerpt.toLowerCase();
+  const words = value.toLowerCase().match(/[a-z\u00c0-\u024f]{4,}/g) ?? [];
+  return [...new Set(words)].filter((w) => !COMMON_WORDS.has(w) && !source.includes(w.slice(0, Math.max(4, w.length - 2))));
+}

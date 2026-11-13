@@ -1,7 +1,7 @@
 import type { Extraction } from "@/schemas/extraction";
 import { ENCOUNTER_KEYS } from "@/schemas/extraction";
 import { isValidIsoDate, isValidTime } from "./dates";
-import { nameAppearsInExcerpt, numericTokens, valueSupportedByExcerpt } from "./text";
+import { nameAppearsInExcerpt, numericTokens, valueSupportedByExcerpt, wordsMissingFromExcerpt } from "./text";
 
 /**
  * Deterministic safety pass applied to every validated model response before it is stored.
@@ -70,6 +70,8 @@ export function dateSupportedByExcerpt(iso: string, excerpt: string | null): boo
 }
 
 const MED_NUMERIC_FIELDS = ["strength", "dose", "frequency", "timing", "duration"] as const;
+/** Free-text dosing fields that must reuse the document's wording. */
+const MED_TEXT_FIELDS = ["dose", "route", "frequency", "timing", "duration", "special_instructions"] as const;
 
 export function sanitizeExtraction(input: Extraction): SanitizeResult {
   const issues: SanitizerIssue[] = [];
@@ -151,6 +153,20 @@ export function sanitizeExtraction(input: Extraction): SanitizeResult {
             ref: { section: "medications", index },
           });
           m = markUncertain({ ...m, [field]: null }, `The ${field} could not be verified and was removed.`);
+        }
+      }
+      for (const field of MED_TEXT_FIELDS) {
+        const value = m[field];
+        const unexplained = wordsMissingFromExcerpt(value, m.source_excerpt);
+        if (value && unexplained.length >= 3) {
+          issues.push({
+            category: "unsupported_value",
+            description: `The ${field} "${value}" for ${m.name} contains wording that is not in the supporting text. It has been removed — please check the original document.`,
+            excerpt: m.source_excerpt,
+            page: m.source_page,
+            ref: { section: "medications", index },
+          });
+          m = markUncertain({ ...m, [field]: null }, `The ${field} did not match the document's wording and was removed.`);
         }
       }
       return m;

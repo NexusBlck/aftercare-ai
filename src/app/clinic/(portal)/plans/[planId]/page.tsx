@@ -33,7 +33,7 @@ interface PlanDetail {
   patient: { id: string; full_name: string; date_of_birth: string; mrn: string | null; linked_at: string | null };
   episode: { id: string; title: string; discharge_date: string | null };
   documents: Array<{ id: string; original_filename: string; document_type: string; processing_status: string; processing_error: string | null }>;
-  versions: Array<{ id: string; version: number; status: string; created_at: string; created_by_name: string | null; submitted_by_name: string | null; submitted_at: string | null; decided_at: string | null }>;
+  versions: Array<{ id: string; version: number; status: string; created_at: string; updated_at: string; created_by_name: string | null; submitted_by_name: string | null; last_edited_by_name: string | null; submitted_at: string | null; decided_at: string | null }>;
   approvals: Array<{ id: string; version: number; decision: string; clinician_name: string | null; comments: string | null; decided_at: string }>;
   current: Version | null;
   approved: Version | null;
@@ -318,6 +318,7 @@ export default function PlanWorkspacePage() {
                       <span className="font-semibold">Version {v.version}</span>
                       <span className="block text-xs text-muted-foreground">
                         Started {formatDate(v.created_at)} by {v.created_by_name ?? "—"}
+                        {v.last_edited_by_name && ` · last changed by ${v.last_edited_by_name} ${formatDate(v.updated_at, true)}`}
                         {v.submitted_at && ` · submitted by ${v.submitted_by_name ?? "—"}`}
                       </span>
                     </span>
