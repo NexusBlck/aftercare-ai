@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { PatchError } from "@/lib/domain/patch";
@@ -45,7 +46,17 @@ export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response
     try {
       return await fn(...args);
     } catch (err) {
+      // Let Next.js handle its own control-flow errors (e.g. dynamic-rendering bail-outs during build)
+      // instead of turning them into a logged 500 response.
+      unstable_rethrow(err);
       return toErrorResponse(err);
     }
   };
+}
+
+/** Drops absent fields from a partial update; an update with nothing to change is a 400, not a database error. */
+export function requireChanges<T extends Record<string, unknown>>(body: T): Partial<T> {
+  const changes = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined)) as Partial<T>;
+  if (Object.keys(changes).length === 0) throw new AppError("invalid_request", "There is nothing to update.", 400);
+  return changes;
 }

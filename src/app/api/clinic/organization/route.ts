@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { enforceRateLimit } from "@/lib/api/auth-guards";
-import { handle, ok, parseJson } from "@/lib/api/route-utils";
+import { handle, ok, parseJson, requireChanges } from "@/lib/api/route-utils";
 import { mapDbError } from "@/lib/clinic/db-errors";
 import { ACTIVE_ORG_COOKIE, requireClinic, rpc } from "@/lib/clinic/server";
 import { AUTH_COOKIE_OPTIONS } from "@/lib/supabase/cookie-options";
@@ -45,7 +45,7 @@ export const POST = handle(async (request: Request) => {
 
 export const PATCH = handle(async (request: Request) => {
   const ctx = await requireClinic("org.manage");
-  const body = await parseJson(request, UpdateOrganizationSchema);
+  const body = requireChanges(await parseJson(request, UpdateOrganizationSchema));
   const { data, error } = await ctx.supabase.from("organizations").update(body).eq("id", ctx.orgId).select("*").single();
   if (error) throw mapDbError(error, "save the clinic profile");
   return ok({ organization: data });

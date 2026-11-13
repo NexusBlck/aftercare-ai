@@ -1,0 +1,81 @@
+name: Security scans
+
+# Static analysis, dependency and configuration scanning. No secrets, no deploys, nothing dynamic
+# against hosted environments (ZAP runs against a local build in ci.yml).
+on:
+  push:
+    branches: [main, clinic-portal, "feat/**"]
+  pull_request:
+  schedule:
+    - cron: "27 4 * * 1" # weekly, to catch newly published vulnerabilities
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep:
+    name: Semgrep (OWASP, TypeScript, React, Next.js, secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: semgrep/semgrep:1.183.0
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Scan
+        run: >
+          semgrep scan --metrics=off --error
+          --config p/owasp-top-ten --config p/typescript --config p/react --config p/nextjs
+          --config p/nodejsscan --config p/secrets --config p/sql-injection --config p/jwt
+          src supabase scripts
+
+  codeql:
+    name: CodeQL (javascript-typescript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: github/codeql-action/init@v4.39.1
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v4.39.1
+
+  dependencies:
+    name: Trivy + OSV-Scanner (dependencies, config, secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          skip-dirs: node_modules,.next
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: "1"
+      - name: OSV-Scanner
+        run: |
+          curl -sSfL -o osv-scanner https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          ./osv-scanner scan source --lockfile package-lock.json
+
+  checkov:
+    name: Checkov (workflow configuration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: bridgecrewio/checkov-action@v12.1347.0
+        with:
+          directory: .github
+          framework: github_actions
+          quiet: true

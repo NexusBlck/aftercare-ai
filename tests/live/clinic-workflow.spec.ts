@@ -14,7 +14,8 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 test.skip(!url || !anon || /qfpaoqacngcfstdchdqj/.test(url), "Live tests need a separate Supabase TEST project (never production).");
 
-const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+// Unique per run; the synthetic passwords below derive from it, so use a CSPRNG.
+const RUN = `${Date.now().toString(36)}${crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
 const PASSWORD = `Synthetic-${RUN}-pw!`;
 const PEOPLE = ["owner-a", "clinician-a", "nurse-a", "owner-b", "patient-a", "patient-b", "outsider"] as const;
 type Person = (typeof PEOPLE)[number];

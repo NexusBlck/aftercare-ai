@@ -13,7 +13,7 @@ export const GET = handle(async (_req: Request, ctx: RouteContext<"/api/clinic/p
   const [versions, approvals, patient, episode, documents, names] = await Promise.all([
     clinic.supabase
       .from("plan_versions")
-      .select("id, version, status, created_by, submitted_by, submitted_at, decided_at, created_at, updated_at, based_on_version_id")
+      .select("id, version, status, created_by, submitted_by, last_edited_by, submitted_at, decided_at, created_at, updated_at, based_on_version_id")
       .eq("plan_id", id)
       .eq("organization_id", clinic.orgId)
       .order("version", { ascending: false }),
@@ -44,7 +44,7 @@ export const GET = handle(async (_req: Request, ctx: RouteContext<"/api/clinic/p
     patient: patient.data,
     episode: episode.data,
     documents: documents.data,
-    versions: rows.map((v) => ({ ...v, created_by_name: name(v.created_by), submitted_by_name: name(v.submitted_by) })),
+    versions: rows.map((v) => ({ ...v, created_by_name: name(v.created_by), submitted_by_name: name(v.submitted_by), last_edited_by_name: name(v.last_edited_by) })),
     approvals: approvals.data,
     current: currentVersion,
     approved: approvedVersion,

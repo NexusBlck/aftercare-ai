@@ -364,6 +364,38 @@ describe("questions", () => {
   });
 });
 
+describe("draft edits are attributed (audit regression)", () => {
+  it("a direct Data API edit by a nurse is stamped and audited, and the stamp cannot be forged", async () => {
+    const ep = (await rpcRow<{ id: string }>(u.ownerA, "insert into care_episodes (organization_id, patient_id, title) values ($1, $2, 'Attribution episode') returning id", [orgA, patientA])).id;
+    const v = (await rpcRow<{ version_id: string }>(u.ownerA, "select * from create_recovery_plan($1, 'Attribution plan', $2::jsonb)", [ep, BUNDLE])).version_id;
+    const nurse2 = await acceptStaff(orgA, u.ownerA, `attr-nurse-${Date.now()}@clinic-a.test`, "nurse", false);
+    await t.as(nurse2, () => t.q("update plan_versions set bundle = jsonb_set(bundle, '{plan,title}', '\"Edited by nurse\"') where id = $1", [v]));
+    const [row] = await t.q<{ last_edited_by: string }>("select last_edited_by from plan_versions where id = $1", [v]);
+    expect(row.last_edited_by).toBe(nurse2);
+    const audit = await t.q<{ actor_user_id: string; metadata: { role: string } }>("select actor_user_id, metadata from audit_logs where action = 'plan.content_changed' and resource_id = $1", [v]);
+    expect(audit.at(-1)).toMatchObject({ actor_user_id: nurse2, metadata: { role: "nurse" } });
+    await rejects(t.as(nurse2, () => t.q("update plan_versions set last_edited_by = $1 where id = $2", [u.clinicianA, v])), "immutable_column");
+  });
+});
+
+describe("account deletion (audit regression)", () => {
+  it("a linked patient can delete their account; the clinic keeps the record, unlinked", async () => {
+    const user = await t.createUser(`deleting-patient-${Date.now()}@example.test`);
+    await t.q("update organization_memberships set clinical_reviewer = true where user_id = $1", [u.ownerB]);
+    const p = (await rpcRow<{ id: string }>(u.ownerB, "insert into clinic_patients (organization_id, full_name, date_of_birth) values ($1, 'Deleting Patient', '1970-01-01') returning id", [orgB])).id;
+    const ep = (await rpcRow<{ id: string }>(u.ownerB, "insert into care_episodes (organization_id, patient_id, title) values ($1, $2, 'Synthetic episode') returning id", [orgB, p])).id;
+    const v = (await rpcRow<{ version_id: string }>(u.ownerB, "select * from create_recovery_plan($1, 'Plan', $2::jsonb)", [ep, BUNDLE])).version_id;
+    await t.as(u.ownerB, () => t.q("select submit_plan_version($1)", [v]));
+    await t.as(u.ownerB, () => t.q("select decide_plan_version($1, 'approved', null)", [v]));
+    const inv = await rpcRow<{ token: string }>(u.ownerB, "select * from create_patient_invitation($1)", [p]);
+    expect((await rpcRow<{ r: { ok: boolean } }>(user, "select redeem_patient_invitation($1, '1970-01-01') as r", [inv.token])).r.ok).toBe(true);
+
+    await t.q("delete from auth.users where id = $1", [user]); // what auth.admin.deleteUser does
+    const [row] = await t.q<{ user_id: string | null }>("select user_id from clinic_patients where id = $1", [p]);
+    expect(row.user_id).toBeNull();
+  });
+});
+
 describe("revocation, unauthenticated access, audit and entitlements", () => {
   it("a revoked staff member loses access immediately", async () => {
     await t.as(u.ownerA, () => t.q("select update_member($1, null, null, 'revoked')", [nurseMembership]));

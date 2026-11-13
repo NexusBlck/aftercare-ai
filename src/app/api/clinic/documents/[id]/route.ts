@@ -1,5 +1,5 @@
 import { AppError } from "@/lib/api/errors";
-import { handle, ok, parseJson } from "@/lib/api/route-utils";
+import { handle, ok, parseJson, requireChanges } from "@/lib/api/route-utils";
 import { mapDbError } from "@/lib/clinic/db-errors";
 import { can } from "@/lib/clinic/permissions";
 import { logClinicEvent, requireClinic } from "@/lib/clinic/server";
@@ -9,7 +9,7 @@ import { getClinicDocument } from "@/services/clinic-documents";
 export const PATCH = handle(async (request: Request, ctx: RouteContext<"/api/clinic/documents/[id]">) => {
   const { id } = await ctx.params;
   const clinic = await requireClinic("documents.upload");
-  const body = await parseJson(request, ClinicDocumentPatchSchema);
+  const body = requireChanges(await parseJson(request, ClinicDocumentPatchSchema));
   if (body.shared_with_patient !== undefined && !can(clinic.member, "documents.share")) {
     throw new AppError("forbidden", "Only clinicians and administrators can share documents with patients.", 403);
   }

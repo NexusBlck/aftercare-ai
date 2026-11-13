@@ -14,6 +14,8 @@ Hosting: Vercel (Next.js) + Supabase (Postgres, Auth, Storage). The current prod
 | `GEMINI_API_KEY`, `GEMINI_PAID_TIER=true` | for AI extraction | AI runs only when the operator confirms a paid-tier key (free-tier content may be used for training) |
 | `GEMINI_MODEL`, `GEMINI_TIMEOUT_MS`, `GEMINI_THINKING_LEVEL` | no | defaults in `src/lib/config.ts` |
 | `AFTERCARE_AI_PROVIDER=mock` | tests only | deterministic synthetic extractor |
+| `AFTERCARE_AI_PROVIDER=freellmapi` + `FREELLMAPI_BASE_URL`, `FREELLMAPI_API_KEY` | optional | free-tier models through a [FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi) server. The Privacy and Subprocessors pages then disclose free-tier processing automatically (free tiers may train on submitted content) |
+| `FREELLMAPI_MODEL`, `FREELLMAPI_VISION_MODEL`, `FREELLMAPI_TIMEOUT_MS` | no | ordered model preference lists (text / photos), tried in turn; per-attempt timeout (default 90 s) |
 | `MAX_UPLOAD_MB` | no (10) | |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | for welcome emails | invitations are **not** emailed |
 | `SECURITY_LOG_SALT` | recommended | pseudonymisation salt for security logs |
@@ -33,6 +35,24 @@ Each step needs the owner's explicit approval.
    does not modify existing rows. Verify with the queries in DATABASE_SCHEMA.md.
 4. Merge `clinic-portal` → `main`, deploy, smoke-test with synthetic accounts, then remove them.
 5. Before any real patient: complete PILOT_READINESS.md.
+
+## Free-tier AI through FreeLLMAPI (local)
+
+FreeLLMAPI v0.16.12 is installed from source in `../freellmapi` (sibling folder), bound to `127.0.0.1:3001`
+(its default listens on all interfaces). Provider keys (Google AI Studio, Groq, OpenRouter) are added by the owner
+on its Keys page and stored encrypted by FreeLLMAPI. The app's settings for it are in `.env.freellmapi.local`
+(gitignored, deliberately not `.env.local` so normal builds and Vercel deploys are unaffected).
+
+```bash
+# start the router
+cd ../freellmapi && set -a && . ./.env && set +a && NODE_ENV=production node server/dist/index.js
+# build and start the app with free-tier AI
+set -a && . ./.env.freellmapi.local && set +a && npx next build && npx next start -p 3400
+```
+
+PDFs are converted to page-marked text before sending (the router refuses binary documents); photos go to vision
+models. The live Vercel site cannot reach a router on this computer: using it in production would need FreeLLMAPI
+hosted on a server reachable from Vercel (with its own HTTPS and access control).
 
 ## Operating subscriptions (manual, pilot)
 
