@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalLayout } from "@/components/legal/legal-layout";
-import { freeTierAiEnabled } from "@/lib/ai-disclosure";
+import { freeTierAi } from "@/lib/ai-disclosure";
 
 export const metadata: Metadata = { title: "Subprocessors" };
 
@@ -32,7 +32,7 @@ const SUBPROCESSORS = [
   },
 ];
 
-/** Listed only while FreeLLMAPI is the configured AI provider. */
+/** Listed while the FreeLLMAPI router is the configured AI provider. */
 const FREE_TIER_AI = {
   name: "Free-tier AI providers routed by FreeLLMAPI",
   purpose: "Reading documents you choose to process and writing plain-language explanations. The provider is chosen per request.",
@@ -43,8 +43,22 @@ const FREE_TIER_AI = {
   terms: "https://github.com/tashfeenahmed/freellmapi",
 };
 
+function freeTierRows() {
+  const ai = freeTierAi();
+  if (!ai) return [];
+  if (ai.mode === "freellmapi") return [FREE_TIER_AI];
+  return ai.providers.map((p) => ({
+    name: p.name,
+    purpose: "Reading documents you choose to process and writing plain-language explanations (used in a fixed fallback order)",
+    data: "The text of processed documents (or the photo), and the extracted items",
+    location: p.location,
+    status: "Active (free tier). May keep and use submitted content to improve its models.",
+    terms: p.terms,
+  }));
+}
+
 export default function SubprocessorsPage() {
-  const rows = freeTierAiEnabled() ? [...SUBPROCESSORS, FREE_TIER_AI] : SUBPROCESSORS;
+  const rows = [...SUBPROCESSORS, ...freeTierRows()];
   return (
     <LegalLayout title="Subprocessors">
       <p>
