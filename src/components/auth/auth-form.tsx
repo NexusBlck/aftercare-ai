@@ -83,9 +83,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       // Sign-in and sign-up run on the server, which sets HttpOnly session cookies; the browser
       // never handles tokens.
       if (mode === "login") {
-        const res = await apiFetch<{ home?: string }>("/api/auth/login", { method: "POST", body: JSON.stringify(parsed.data) });
+        const res = await apiFetch<{ home?: string; mfa_required?: boolean }>("/api/auth/login", { method: "POST", body: JSON.stringify(parsed.data) });
         const next = new URLSearchParams(window.location.search).get("next");
-        navigateFresh(next ? safeNext(next, window.location.origin) : (pendingInvitationPath() ?? res.home ?? "/dashboard"));
+        const target = next ? safeNext(next, window.location.origin) : (pendingInvitationPath() ?? res.home ?? "/dashboard");
+        navigateFresh(res.mfa_required ? `/security/verify?next=${encodeURIComponent(target)}` : target);
       } else {
         const res = await apiFetch<{ needsConfirmation: boolean }>("/api/auth/signup", {
           method: "POST",

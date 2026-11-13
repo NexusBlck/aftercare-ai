@@ -10,6 +10,7 @@ import {
   Menu,
   MessageSquareText,
   ScrollText,
+  ShieldCheck,
   Settings,
   Users,
   UserRoundPlus,
@@ -38,6 +39,7 @@ const NAV: Array<{ href: string; label: string; icon: typeof LayoutDashboard; pe
   { href: "/clinic/settings", label: "Clinic settings", icon: Settings },
   { href: "/clinic/billing", label: "Subscription", icon: CreditCard, permission: "billing.read" },
   { href: "/clinic/audit", label: "Audit log", icon: ScrollText, permission: "audit.read" },
+  { href: "/security", label: "Account security", icon: ShieldCheck },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {

@@ -1,12 +1,13 @@
 "use client";
 
-import { Building2, LogIn } from "lucide-react";
+import { Building2, LogIn, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { use, useEffect, type ReactNode } from "react";
 import { browser } from "react-dom";
 import { useRouter } from "next/navigation";
 import { LogoMark } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
+import { navigateFresh } from "@/lib/client/navigation";
 import { ClinicProvider, useClinicMe } from "./clinic-context";
 import { ClinicShell } from "./clinic-shell";
 import { ErrorState } from "./ui";
@@ -35,6 +36,26 @@ export function ClinicRoot({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (noClinic) router.replace("/clinic/register");
   }, [noClinic, router]);
+  const needsCode = error?.code === "mfa_required";
+  useEffect(() => {
+    if (needsCode) navigateFresh(`/security/verify?next=${encodeURIComponent(window.location.pathname)}`);
+  }, [needsCode]);
+
+  if (needsCode) return <Loading />;
+  if (error?.code === "mfa_setup_required") {
+    return (
+      <main className="flex min-h-dvh items-center justify-center px-4">
+        <div className="max-w-sm text-center">
+          <ShieldCheck className="mx-auto size-8 text-primary" aria-hidden />
+          <p className="mt-3 font-semibold">Your clinic requires two-factor authentication.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Set up an authenticator app on your phone to continue. It takes about a minute.</p>
+          <Button asChild className="mt-4">
+            <Link href="/security?next=/clinic/dashboard">Set up two-factor</Link>
+          </Button>
+        </div>
+      </main>
+    );
+  }
 
   if (error?.code === "unauthorized") {
     return (

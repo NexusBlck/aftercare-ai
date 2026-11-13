@@ -12,6 +12,7 @@ export const PROTECTED_PREFIXES = [
   "/onboarding",
   "/care-team",
   "/clinic",
+  "/security",
 ];
 
 /** Public entry points inside protected areas: they handle signed-out visitors themselves. */

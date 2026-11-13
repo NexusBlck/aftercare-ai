@@ -22,6 +22,7 @@ export interface ClinicMe {
       name: string;
       slug: string;
       org_type: string;
+      require_mfa: boolean;
       city: string | null;
       address: string | null;
       contact_email: string | null;

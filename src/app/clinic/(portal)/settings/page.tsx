@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useClinic } from "@/components/clinic/clinic-context";
@@ -8,6 +9,7 @@ import { ClinicPageHeader, Field, NativeSelect, Section } from "@/components/cli
 import { send } from "@/components/clinic/use-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_EMERGENCY_GUIDANCE } from "@/lib/clinic/urgent";
 import { ClientError } from "@/lib/client/http";
@@ -27,6 +29,20 @@ export default function ClinicSettingsPage() {
     emergency_instructions: org.emergency_instructions ?? "",
   });
   const [busy, setBusy] = useState(false);
+  const [mfaBusy, setMfaBusy] = useState(false);
+
+  const setRequireMfa = async (value: boolean) => {
+    setMfaBusy(true);
+    try {
+      await send("/api/clinic/organization", "PATCH", { require_mfa: value });
+      toast.success(value ? "Two-factor authentication is now required for all staff." : "Two-factor authentication is no longer required.");
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof ClientError ? err.message : "We could not change the setting.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
 
   return (
@@ -95,6 +111,23 @@ export default function ClinicSettingsPage() {
           </div>
         )}
       </form>
+      <div className="mt-6 max-w-3xl">
+        <Section title="Security" description="Two-factor authentication asks staff for a code from an authenticator app each time they sign in.">
+          <label className="flex items-start gap-3 text-sm">
+            <Switch checked={org.require_mfa} disabled={!editable || mfaBusy} onCheckedChange={(v) => void setRequireMfa(v)} className="mt-0.5" />
+            <span>
+              <span className="font-medium">Require two-factor authentication for all staff</span>
+              <span className="block text-muted-foreground">
+                Staff without it cannot open patient records until they set it up. Turn it on for your own account first in{" "}
+                <Link href="/security" className="underline underline-offset-2">
+                  Account security
+                </Link>
+                .
+              </span>
+            </span>
+          </label>
+        </Section>
+      </div>
     </>
   );
 }

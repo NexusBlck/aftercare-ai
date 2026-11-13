@@ -57,6 +57,7 @@ export const UpdateOrganizationSchema = z.object({
   contact_phone: phone,
   communication_hours: optionalText(300),
   emergency_instructions: optionalText(600),
+  require_mfa: z.boolean().optional(),
 });
 
 export const PatientInputSchema = z.object({

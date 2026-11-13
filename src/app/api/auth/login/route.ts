@@ -2,6 +2,7 @@ import { enforceRateLimit } from "@/lib/api/auth-guards";
 import { AppError } from "@/lib/api/errors";
 import { handle, ok, parseJson } from "@/lib/api/route-utils";
 import { clearFailures, clientIp, pseudonymize, recordFailure, securityEvent } from "@/lib/security/audit-log";
+import { mfaState, needsSecondStep } from "@/lib/supabase/mfa";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { LoginSchema } from "@/schemas/auth";
 
@@ -40,5 +41,7 @@ export const POST = handle(async (request: Request) => {
     .select("id", { count: "exact", head: true })
     .eq("user_id", data.user.id)
     .eq("status", "active");
-  return ok({ ok: true, home: count ? "/clinic/dashboard" : "/dashboard" });
+  const home = count ? "/clinic/dashboard" : "/dashboard";
+  // Accounts with two-factor get a password-only (aal1) session; the code step upgrades it.
+  return ok({ ok: true, home, mfa_required: needsSecondStep(await mfaState(supabase)) });
 });
