@@ -15,7 +15,11 @@ export type SecurityEventType =
   | "upload_rejected"
   | "password_reset_requested"
   | "password_changed"
-  | "invitation_redeem_failed";
+  | "invitation_redeem_failed"
+  | "mfa_enabled"
+  | "mfa_disabled"
+  | "mfa_verified"
+  | "mfa_failed";
 
 const SALT = process.env.SECURITY_LOG_SALT ?? "aftercare-security-log";
 

@@ -1,7 +1,8 @@
 import { AppError } from "@/lib/api/errors";
 import { handle, ok, parseJson } from "@/lib/api/route-utils";
 import { mapDbError } from "@/lib/clinic/db-errors";
-import { assignableRoles } from "@/lib/clinic/permissions";
+import { deliverInvitation } from "@/lib/clinic/invitation-delivery";
+import { assignableRoles, ROLE_LABELS } from "@/lib/clinic/permissions";
 import { requireClinic, rpc } from "@/lib/clinic/server";
 import { StaffInviteSchema } from "@/schemas/clinic";
 
@@ -27,8 +28,8 @@ export const GET = handle(async () => {
 });
 
 /**
- * Creates a staff invitation. No email is sent: the link is shown once to the inviter to share
- * through a channel the clinic trusts. Only the token's hash is stored.
+ * Creates a staff invitation and emails the link to the invited address. The link is also shown once
+ * to the inviter, as a fallback when email is not configured or fails. Only the token's hash is stored.
  */
 export const POST = handle(async (request: Request) => {
   const ctx = await requireClinic("staff.manage");
@@ -42,5 +43,14 @@ export const POST = handle(async (request: Request) => {
   );
   const inv = rows[0];
   const origin = new URL(request.url).origin;
-  return ok({ invitation_id: inv.invitation_id, expires_at: inv.expires_at, link: `${origin}/clinic/join#t=${inv.token}`, delivery: "manual" }, { status: 201 });
+  const link = `${origin}/clinic/join#t=${inv.token}`;
+  const delivery = await deliverInvitation({
+    kind: "staff",
+    to: body.email,
+    link,
+    organization: ctx.member.organization.name,
+    role: ROLE_LABELS[body.role].toLowerCase(),
+    origin,
+  });
+  return ok({ invitation_id: inv.invitation_id, expires_at: inv.expires_at, link, ...delivery }, { status: 201 });
 });

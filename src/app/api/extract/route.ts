@@ -5,6 +5,7 @@ import { serverConfig } from "@/lib/config";
 import { extractDocument, requireAi } from "@/lib/gemini/pipeline";
 import { securityEvent } from "@/lib/security/audit-log";
 import { checkFileContent } from "@/lib/security/file-validation";
+import { scanUpload } from "@/lib/security/malware-scan";
 import { clientKey, rateLimit } from "@/lib/security/rate-limit";
 
 export const maxDuration = 300;
@@ -15,10 +16,10 @@ export const maxDuration = 300;
  */
 export const POST = handle(async (request: Request) => {
   requireAi();
-  const limit = rateLimit(`extract:${clientKey(request)}`, 8, 10 * 60_000);
+  const limit = await rateLimit(`extract:${clientKey(request)}`, 8, 10 * 60_000);
   if (!limit.ok) throw new AppError("rate_limited", `Too many documents processed. Try again in ${limit.retryAfterSec} seconds.`, 429, true);
   // Demo extraction is anonymous: an overall cap protects the shared AI quota from many visitors at once.
-  const overall = rateLimit("extract:all", 60, 10 * 60_000);
+  const overall = await rateLimit("extract:all", 60, 10 * 60_000);
   if (!overall.ok) throw new AppError("ai_rate_limited", "The demo is very busy right now. Please try again in a few minutes.", 429, true);
 
   const maxBytes = serverConfig().maxUploadBytes;
@@ -39,6 +40,11 @@ export const POST = handle(async (request: Request) => {
   if (!check.ok) {
     securityEvent("upload_rejected", request, { reason: check.code });
     throw new AppError(check.code, check.message, 400);
+  }
+  const scan = await scanUpload(bytes, check.mime);
+  if (!scan.ok) {
+    securityEvent("upload_rejected", request, { reason: scan.reason });
+    throw new AppError("unsafe_file", scan.message, 400);
   }
 
   return ndjsonStream(async (emit) => {

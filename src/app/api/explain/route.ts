@@ -16,7 +16,7 @@ const BodySchema = z.object({
  */
 export const POST = handle(async (request: Request) => {
   requireAi();
-  const limit = rateLimit(`explain:${clientKey(request)}`, 10, 10 * 60_000);
+  const limit = await rateLimit(`explain:${clientKey(request)}`, 10, 10 * 60_000);
   if (!limit.ok) throw new AppError("rate_limited", `Too many requests. Try again in ${limit.retryAfterSec} seconds.`, 429, true);
   const body = await parseJson(request, BodySchema);
   return ok({ explanations: await explainItems(body.items) });

@@ -29,8 +29,18 @@ const SUPABASE_STUBS = `
   create function auth.uid() returns uuid language sql stable as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
   $$;
+  -- Session claims (Supabase's auth.jwt()); "aal" says whether two-factor was completed.
+  create function auth.jwt() returns jsonb language sql stable as $$
+    select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+  $$;
+  create table auth.mfa_factors (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users (id) on delete cascade,
+    factor_type text not null default 'totp',
+    status text not null default 'unverified'
+  );
   grant usage on schema auth to anon, authenticated, service_role;
-  grant execute on function auth.uid() to anon, authenticated, service_role;
+  grant execute on function auth.uid(), auth.jwt() to anon, authenticated, service_role;
 
   create schema storage;
   create table storage.buckets (
@@ -72,8 +82,10 @@ function migrationSql(): string {
 
 export interface TestDb {
   db: PGlite;
-  /** Runs `fn` as the signed-in user (role `authenticated`, auth.uid() = userId). */
-  as<T>(userId: string | null, fn: () => Promise<T>): Promise<T>;
+  /** Runs `fn` as the signed-in user (role `authenticated`, auth.uid() = userId); `aal` defaults to aal1. */
+  as<T>(userId: string | null, fn: () => Promise<T>, opts?: { aal?: "aal1" | "aal2" }): Promise<T>;
+  /** Gives the user a verified (or unverified) two-factor method. */
+  addFactor(userId: string, status?: "verified" | "unverified"): Promise<void>;
   /** Creates an auth user (as the trigger-owning superuser) and returns its id. */
   createUser(email: string): Promise<string>;
   /** Query as the current role; returns rows. */
@@ -91,15 +103,20 @@ export async function createTestDb(): Promise<TestDb> {
   return {
     db,
     q,
-    async as(userId, fn) {
+    async as(userId, fn, opts) {
       await db.exec(userId ? "set role authenticated" : "set role anon");
       await db.query("select set_config('request.jwt.claim.sub', $1, false)", [userId ?? ""]);
+      await db.query("select set_config('request.jwt.claims', $1, false)", [userId ? JSON.stringify({ sub: userId, aal: opts?.aal ?? "aal1" }) : ""]);
       try {
         return await fn();
       } finally {
         await db.exec("reset role");
         await db.query("select set_config('request.jwt.claim.sub', '', false)");
+        await db.query("select set_config('request.jwt.claims', '', false)");
       }
+    },
+    async addFactor(userId, status = "verified") {
+      await q("insert into auth.mfa_factors (user_id, status) values ($1, $2)", [userId, status]);
     },
     async createUser(email) {
       const [row] = await q<{ id: string }>("insert into auth.users (email) values ($1) returning id", [email]);

@@ -10,9 +10,9 @@ import { ResetRequestSchema } from "@/schemas/auth";
  * accounts. Links are single-use and expire after the Supabase "email OTP expiry" (15 minutes).
  */
 export const POST = handle(async (request: Request) => {
-  enforceRateLimit(request, "reset-ip", clientIp(request), 5, 60 * 60_000);
+  await enforceRateLimit(request, "reset-ip", clientIp(request), 5, 60 * 60_000);
   const { email } = await parseJson(request, ResetRequestSchema);
-  enforceRateLimit(request, "reset-email", email, 3, 60 * 60_000);
+  await enforceRateLimit(request, "reset-email", email, 3, 60 * 60_000);
   const supabase = await createServerSupabase();
   if (!supabase) throw new AppError("accounts_unconfigured", "Accounts are not configured on this server.", 503);
 

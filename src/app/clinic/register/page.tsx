@@ -29,14 +29,21 @@ export default function ClinicRegisterPage() {
   const [memberOf, setMemberOf] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch<{ active: { organization: { name: string } } | null }>("/api/clinic/me")
-      .then((me) => {
+    // Ask "signed in?" first so visitors never get a 401 (which browsers log as an error).
+    apiFetch<{ signed_in: boolean }>("/api/auth/session")
+      .then(async ({ signed_in }) => {
+        if (!signed_in) return setStep("account");
+        const me = await apiFetch<{ active: { organization: { name: string } } | null }>("/api/clinic/me");
         if (me.active) {
           setMemberOf(me.active.organization.name);
           setStep("member");
         } else setStep("clinic");
       })
-      .catch(() => setStep("account"));
+      .catch((err) => {
+        // A staff member who still has to enter their two-factor code already has a clinic.
+        if (err instanceof ClientError && err.code === "mfa_required") navigateFresh("/security/verify?next=/clinic/dashboard");
+        else setStep("account");
+      });
   }, []);
 
   return (
@@ -62,7 +69,11 @@ export default function ClinicRegisterPage() {
           <Logo />
         </div>
         <div className="w-full max-w-md">
-          {step === "loading" && <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" aria-label="Loading" />}
+          {step === "loading" && (
+            <div className="flex min-h-[34rem] items-center justify-center">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label="Loading" />
+            </div>
+          )}
           {step === "account" && <AccountStep onDone={(needsConfirmation) => setStep(needsConfirmation ? "confirm-email" : "clinic")} />}
           {step === "confirm-email" && (
             <div role="status">

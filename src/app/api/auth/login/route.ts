@@ -2,6 +2,7 @@ import { enforceRateLimit } from "@/lib/api/auth-guards";
 import { AppError } from "@/lib/api/errors";
 import { handle, ok, parseJson } from "@/lib/api/route-utils";
 import { clearFailures, clientIp, pseudonymize, recordFailure, securityEvent } from "@/lib/security/audit-log";
+import { mfaState, needsSecondStep } from "@/lib/supabase/mfa";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { LoginSchema } from "@/schemas/auth";
 
@@ -11,9 +12,9 @@ const BURST_LIMIT = 5;
 /** Server-side sign-in. Session cookies are set HttpOnly by the Supabase server client. */
 export const POST = handle(async (request: Request) => {
   const ip = clientIp(request);
-  enforceRateLimit(request, "login-ip", ip, 20, 10 * 60_000);
+  await enforceRateLimit(request, "login-ip", ip, 20, 10 * 60_000);
   const { email, password } = await parseJson(request, LoginSchema);
-  enforceRateLimit(request, "login-email", email, 10, 15 * 60_000);
+  await enforceRateLimit(request, "login-email", email, 10, 15 * 60_000);
 
   const supabase = await createServerSupabase();
   if (!supabase) throw new AppError("accounts_unconfigured", "Accounts are not configured on this server.", 503);
@@ -40,5 +41,7 @@ export const POST = handle(async (request: Request) => {
     .select("id", { count: "exact", head: true })
     .eq("user_id", data.user.id)
     .eq("status", "active");
-  return ok({ ok: true, home: count ? "/clinic/dashboard" : "/dashboard" });
+  const home = count ? "/clinic/dashboard" : "/dashboard";
+  // Accounts with two-factor get a password-only (aal1) session; the code step upgrades it.
+  return ok({ ok: true, home, mfa_required: needsSecondStep(await mfaState(supabase, data.user)) });
 });

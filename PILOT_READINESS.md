@@ -13,10 +13,10 @@ clinical approvals have not happened, and the clinic portal is not deployed to p
 | Multi-tenant data model + RLS | ✓ | ✓ (PGlite 37 + live test project 11) | ✗ | ◐ (test project only; not production) | — | — |
 | Clinic onboarding, staff, roles | ✓ | ✓ DB + live | ✗ | ✗ | — | — |
 | Patient registration, episodes | ✓ | ✓ DB + live | ✗ | ✗ | ✗ (data minimisation, consent wording) | — |
-| Document upload (private storage) | ✓ | ✓ live (Supabase Storage) | ✗ | ✗ (no malware scanning) | ✗ | — |
+| Document upload (private storage) | ✓ | ✓ live (Supabase Storage) | ✗ | ✓ built-in malware check (no signature antivirus) | ✗ | — |
 | AI extraction (existing pipeline) | ✓ | ✓ synthetic only | ✗ | ✗ (needs paid-tier Gemini key) | ✗ (Google as processor, DPA) | ✗ (accuracy on real documents) |
 | Clinical review + approval + versioning | ✓ | ✓ | ✗ | ✗ | — | ✗ |
-| Patient invitations + account linking | ✓ | ✓ DB + live | ✗ | ✗ (manual delivery only) | ✗ | — |
+| Patient invitations + account linking | ✓ | ✓ DB + live | ✗ | ✓ email (or manual link) | ✗ | — |
 | Patient care-team view | ✓ | ✓ live | ✗ | ✗ | — | ✗ |
 | Follow-ups, questions, urgent screen | ✓ | ✓ | ✗ | ✗ | — | ✗ (keyword list + wording) |
 | Notifications | in-app ✓ | ✓ | ✗ | email/SMS not configured | — | — |
@@ -45,11 +45,11 @@ clinical approvals have not happened, and the clinic portal is not deployed to p
 
 ### High priority
 
-- Malware scanning for uploads (e.g. a scanning service before files become processable).
+- Optional: signature antivirus via a third-party service (built-in active-content check is in place).
 - Staff MFA (Supabase Auth MFA) and a session timeout policy for shared clinic workstations.
 - Shared rate-limit store across Vercel instances.
 - Signed-in Playwright E2E for the clinic workflow against the test project (Clinic A/B, roles, patients A/B).
-- Decide invitation delivery (manual link vs. email/SMS/WhatsApp provider) and update copy.
+- Invitations are emailed when SMTP is configured; decide whether SMS/WhatsApp delivery is also needed.
 - Data-retention job for clinic data once the period is agreed.
 
 ### Medium priority

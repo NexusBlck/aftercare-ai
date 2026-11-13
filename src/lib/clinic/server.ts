@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { AppError } from "@/lib/api/errors";
 import { isUuid } from "@/lib/security/file-validation";
+import { mfaState, needsSecondStep } from "@/lib/supabase/mfa";
 import { requireUser, type AuthedContext } from "@/lib/supabase/server";
 import { can, type ClinicRole, type Permission } from "./permissions";
 import { mapDbError } from "./db-errors";
@@ -16,7 +17,7 @@ export interface Membership {
   clinical_reviewer: boolean;
   display_name: string | null;
   email: string | null;
-  organization: { id: string; name: string; slug: string };
+  organization: { id: string; name: string; slug: string; require_mfa: boolean };
 }
 
 export interface ClinicContext extends AuthedContext {
@@ -28,7 +29,7 @@ export interface ClinicContext extends AuthedContext {
 export async function loadMemberships(ctx: AuthedContext): Promise<Membership[]> {
   const { data, error } = await ctx.supabase
     .from("organization_memberships")
-    .select("id, organization_id, role, clinical_reviewer, display_name, email, organization:organizations(id, name, slug)")
+    .select("id, organization_id, role, clinical_reviewer, display_name, email, organization:organizations(id, name, slug, require_mfa)")
     .eq("user_id", ctx.user.id)
     .eq("status", "active")
     .order("created_at");
@@ -38,7 +39,8 @@ export async function loadMemberships(ctx: AuthedContext): Promise<Membership[]>
 
 /**
  * Verifies the session and an *active* membership. The organization comes from the user's own
- * memberships (optionally narrowed by the active-org cookie), never from request input.
+ * memberships (optionally narrowed by the active-org cookie), never from request input. Two-factor
+ * rules are checked here for a clear message; the database enforces the same rules (migration 0004).
  */
 export async function requireClinic(permission?: Permission): Promise<ClinicContext> {
   const auth = await requireUser();
@@ -49,6 +51,13 @@ export async function requireClinic(permission?: Permission): Promise<ClinicCont
   const preferred = (await cookies()).get(ACTIVE_ORG_COOKIE)?.value;
   const member = memberships.find((m) => m.organization_id === preferred) ?? memberships[0];
   const ctx: ClinicContext = { ...auth, memberships, member, orgId: member.organization_id };
+  const mfa = await mfaState(auth.supabase, auth.user);
+  if (needsSecondStep(mfa)) {
+    throw new AppError("mfa_required", "Enter the code from your authenticator app to continue.", 401);
+  }
+  if (member.organization.require_mfa && mfa.currentLevel !== "aal2") {
+    throw new AppError("mfa_setup_required", "Your clinic requires two-factor authentication. Set it up to continue.", 403);
+  }
   if (permission) requirePermission(ctx, permission);
   return ctx;
 }

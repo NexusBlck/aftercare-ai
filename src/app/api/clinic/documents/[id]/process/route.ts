@@ -28,7 +28,7 @@ export const POST = handle(async (_req: Request, ctx: RouteContext<"/api/clinic/
   const { id } = await ctx.params;
   const clinic = await requireClinic("documents.upload");
   requireAi();
-  const limit = rateLimit(`clinic-process:${clinic.user.id}`, 20, 10 * 60_000);
+  const limit = await rateLimit(`clinic-process:${clinic.user.id}`, 20, 10 * 60_000);
   if (!limit.ok) throw new AppError("rate_limited", `Several documents were processed recently. Try again in ${limit.retryAfterSec} seconds.`, 429, true);
 
   const doc = await getClinicDocument(clinic, id);

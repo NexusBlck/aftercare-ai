@@ -41,6 +41,22 @@ export async function parseJson<T>(request: Request, schema: ZodType<T>): Promis
   return result.data;
 }
 
+/** Like parseJson, but an empty body means "all defaults" (for actions whose options are optional). */
+export async function parseOptionalJson<T>(request: Request, schema: ZodType<T>): Promise<T> {
+  const raw = await request.text();
+  let body: unknown = {};
+  if (raw.trim()) {
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      throw new AppError("invalid_request", "The request body must be JSON.", 400);
+    }
+  }
+  const result = schema.safeParse(body);
+  if (!result.success) throw new AppError("invalid_request", "The request was not valid.", 400);
+  return result.data;
+}
+
 export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response>) {
   return async (...args: A): Promise<Response> => {
     try {

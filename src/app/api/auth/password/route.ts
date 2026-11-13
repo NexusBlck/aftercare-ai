@@ -8,7 +8,7 @@ import { NewPasswordSchema } from "@/schemas/auth";
 /** Sets a new password for the signed-in user, including after following a reset link. */
 export const POST = handle(async (request: Request) => {
   const { supabase, user } = await requireUser();
-  enforceRateLimit(request, "password-change", user.id, 5, 60 * 60_000);
+  await enforceRateLimit(request, "password-change", user.id, 5, 60 * 60_000);
   const { password } = await parseJson(request, NewPasswordSchema);
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {

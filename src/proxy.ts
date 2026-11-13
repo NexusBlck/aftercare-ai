@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/")) {
-    const limit = rateLimit(`api:${pseudonymize(clientIp(request))}`, API_RATE_LIMIT.limit, API_RATE_LIMIT.windowMs);
+    const limit = await rateLimit(`api:${pseudonymize(clientIp(request))}`, API_RATE_LIMIT.limit, API_RATE_LIMIT.windowMs);
     if (!limit.ok) {
       securityEvent("rate_limited", request, { limit: "api-ip" });
       return jsonError(429, "rate_limited", `Too many requests. Please wait ${limit.retryAfterSec} seconds.`, {

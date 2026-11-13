@@ -25,8 +25,8 @@ export default function PatientInvitationPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    apiFetch("/api/profile")
-      .then(() => setSignedIn(true))
+    apiFetch<{ signed_in: boolean }>("/api/auth/session")
+      .then((r) => setSignedIn(r.signed_in))
       .catch(() => setSignedIn(false));
   }, []);
 

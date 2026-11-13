@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { buildSamplePlan } from "@/lib/demo/sample-plan";
 import { applyExplanations, checkExplanation, collectExplainable } from "@/lib/domain/explanations";
 import { buildSummaryPdf, EXPORT_NOTICE, toWinAnsi } from "@/lib/pdf/build-summary";
-import { rateLimit } from "@/lib/security/rate-limit";
+import { memoryRateLimit } from "@/lib/security/rate-limit";
 import {
   buildStoragePath,
   checkFileClaims,
@@ -85,10 +85,10 @@ describe("file validation", () => {
 describe("rate limiting", () => {
   it("blocks after the limit within the window and recovers after it", () => {
     const key = `test-${Math.random()}`;
-    expect(rateLimit(key, 2, 1000, 0).ok).toBe(true);
-    expect(rateLimit(key, 2, 1000, 10).ok).toBe(true);
-    expect(rateLimit(key, 2, 1000, 20)).toMatchObject({ ok: false });
-    expect(rateLimit(key, 2, 1000, 1500).ok).toBe(true);
+    expect(memoryRateLimit(key, 2, 1000, 0).ok).toBe(true);
+    expect(memoryRateLimit(key, 2, 1000, 10).ok).toBe(true);
+    expect(memoryRateLimit(key, 2, 1000, 20)).toMatchObject({ ok: false });
+    expect(memoryRateLimit(key, 2, 1000, 1500).ok).toBe(true);
   });
 });
 

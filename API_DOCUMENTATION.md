@@ -24,7 +24,7 @@ clinic (derived from memberships; switchable via `active-org`). "Permission" ref
 | `PATCH /organization` | `org.manage` | profile, communication hours, emergency instructions | `{ organization }` |
 | `POST /join` | signed in (invited email) | `{ token, display_name? }` | `{ organization_id }` |
 | `GET /staff` | member | — | members, pending invitations (owner/admin), assignable roles |
-| `POST /staff` | `staff.manage` | `{ email, role, clinical_reviewer }` | `201 { link, expires_at, delivery: "manual" }` |
+| `POST /staff` | `staff.manage` | `{ email, role, clinical_reviewer }` | `201 { link, expires_at, delivery: "email" }` or `{ …, delivery: "manual", email_status: "not_configured" | "failed" }`: the link is emailed to the invited address and also returned once |
 | `DELETE /staff/invitations/[id]` | `staff.manage` | — | withdraws invitation |
 | `PATCH /staff/members/[id]` | `staff.manage` | `{ role?, clinical_reviewer?, status? }` | role change / revoke / reinstate |
 | `GET /dashboard` | member | — | counts, review queue, recent patients, follow-ups, activity (owner/admin) |
@@ -33,7 +33,7 @@ clinic (derived from memberships; switchable via `active-org`). "Permission" ref
 | `GET /patients/[id]` | `patients.read` | — | patient, episodes, documents, plans, invitations, questions, progress, follow-ups |
 | `PATCH /patients/[id]` | `patients.write` (`status`: `patients.archive`) | partial patient fields | `{ patient }` |
 | `POST /patients/[id]/episodes` | `patients.write` | `{ title, department?, admission_date?, discharge_date? }` | `201 { episode }` |
-| `POST /patients/[id]/invitations` | `invitations.manage` | — | `201 { link, expires_at, delivery: "manual" }` (needs an approved plan) |
+| `POST /patients/[id]/invitations` | `invitations.manage` | optional `{ send_email: boolean }` | `201 { link, expires_at, delivery }`; with `send_email` and an address on file the link is emailed (clinic name only, no health information), otherwise `delivery: "manual"` with `email_status` (needs an approved plan) |
 | `DELETE /invitations/[id]` | `invitations.manage` | — | withdraws patient invitation |
 | `POST /documents/upload` | `documents.upload` | `{ episode_id, filename, size, document_type }` | `201 { document, uploadUrl, contentType }` |
 | `POST /documents/[id]/finalize` | `documents.upload` | — | verifies bytes; rejects mismatches |

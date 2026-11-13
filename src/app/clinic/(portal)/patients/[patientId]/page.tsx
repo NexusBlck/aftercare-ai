@@ -11,9 +11,11 @@ import { ClinicPageHeader, EmptyState, ErrorState, Field, formatDate, LoadingRow
 import { send, useApi } from "@/components/clinic/use-api";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { deliverySentence, type InvitationResult } from "@/lib/clinic/invitation-copy";
 import { DOCUMENT_TYPE_LABELS, PROCESSING_LABELS } from "@/lib/clinic/labels";
 import { ClientError } from "@/lib/client/http";
 
@@ -67,7 +69,8 @@ export default function PatientDetailPage() {
   const [episodeOpen, setEpisodeOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [invite, setInvite] = useState<{ link: string; expires_at: string } | null>(null);
+  const [invite, setInvite] = useState<InvitationResult | null>(null);
+  const [emailInvite, setEmailInvite] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
   const run = async (key: string, fn: () => Promise<unknown>, success?: string) => {
@@ -277,18 +280,28 @@ export default function PatientDetailPage() {
                 <p className="text-sm text-muted-foreground">
                   {approvedPlan ? "Invite the patient to view their approved plan in the AFTERCARE AI app." : "An invitation can be created once a recovery plan has been approved."}
                 </p>
+                {can("invitations.manage") && !archived && patient.email && approvedPlan && (
+                  <label className="mt-3 flex items-start gap-2 text-sm">
+                    <Checkbox checked={emailInvite} onCheckedChange={(v) => setEmailInvite(v === true)} className="mt-0.5" />
+                    <span>
+                      Email the link to <span className="font-medium break-all">{patient.email}</span>
+                    </span>
+                  </label>
+                )}
                 {can("invitations.manage") && !archived && (
                   <Button
                     className="mt-3 w-full"
                     disabled={!approvedPlan || busy === "invite" || !active.entitlements.active}
                     onClick={() =>
                       run("invite", async () => {
-                        const res = await send<{ link: string; expires_at: string }>(`/api/clinic/patients/${patient.id}/invitations`, "POST");
+                        const res = await send<InvitationResult>(`/api/clinic/patients/${patient.id}/invitations`, "POST", {
+                          send_email: emailInvite && !!patient.email,
+                        });
                         setInvite(res);
                       })
                     }
                   >
-                    <Link2 aria-hidden /> {pendingInvite ? "Create a new invitation link" : "Create invitation link"}
+                    <Link2 aria-hidden /> {pendingInvite ? "Create a new invitation" : "Create invitation"}
                   </Button>
                 )}
               </>
@@ -386,10 +399,10 @@ export default function PatientDetailPage() {
       <Dialog open={!!invite} onOpenChange={(o) => !o && setInvite(null)}>
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Invitation link created</DialogTitle>
+            <DialogTitle>{invite?.delivery === "email" ? "Invitation sent" : "Invitation link created"}</DialogTitle>
             <DialogDescription>
-              No message has been sent. Share this link with the patient through a channel your clinic trusts. It works once, expires on {formatDate(invite?.expires_at, true)}, and the patient
-              must confirm their date of birth. This link is shown only now.
+              {invite && deliverySentence(invite, patient.email)} Use a channel your clinic trusts. The link works once, expires on {formatDate(invite?.expires_at, true)}, and the
+              patient must confirm their date of birth. It is shown only now.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2">

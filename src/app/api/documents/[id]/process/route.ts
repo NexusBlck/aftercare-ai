@@ -27,7 +27,7 @@ export const POST = handle(async (_req: NextRequest, ctx: RouteContext<"/api/doc
   const { supabase, user, bucket } = auth;
   const ai = requireAi();
 
-  const limit = rateLimit(`process:${user.id}`, 10, 10 * 60_000);
+  const limit = await rateLimit(`process:${user.id}`, 10, 10 * 60_000);
   if (!limit.ok) {
     throw new AppError("rate_limited", `You have processed several documents recently. Try again in ${limit.retryAfterSec} seconds.`, 429, true);
   }

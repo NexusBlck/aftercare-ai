@@ -100,4 +100,4 @@ availability change daily; extracted plans still require clinician (or patient) 
 - The live suite runs locally; the Vercel preview of `clinic-portal` is protected by Vercel Authentication, so it was
   not driven by automation.
 - Live Gemini extraction quality on real documents (the test extractor is used).
-- Malware scanning (not implemented).
+- Signature antivirus (not implemented; the built-in active-content check is tested in `tests/unit/malware-scan.test.ts`).

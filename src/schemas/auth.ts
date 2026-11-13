@@ -28,3 +28,10 @@ export const SignupSchema = z.object({
 
 export const ResetRequestSchema = z.object({ email: EmailSchema });
 export const NewPasswordSchema = z.object({ password: PasswordSchema });
+
+/** Six-digit code from an authenticator app. */
+export const MfaCodeSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code from your authenticator app."),
+  factor_id: z.uuid().optional(),
+});
+export const MfaFactorSchema = z.object({ factor_id: z.uuid() });

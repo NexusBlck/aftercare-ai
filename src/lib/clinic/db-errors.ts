@@ -9,6 +9,11 @@ import { AppError, type ApiErrorCode } from "@/lib/api/errors";
 const KNOWN: Record<string, { code: ApiErrorCode; status: number; message: string }> = {
   unauthorized: { code: "unauthorized", status: 401, message: "Your session has expired. Please sign in again." },
   forbidden: { code: "forbidden", status: 403, message: "Your role does not allow this action." },
+  mfa_required_first: {
+    code: "mfa_required",
+    status: 403,
+    message: "Set up two-factor authentication for your own account (and sign in with it) before requiring it for the clinic.",
+  },
   not_found: { code: "not_found", status: 404, message: "That record was not found." },
   subscription_inactive: {
     code: "subscription_inactive",
