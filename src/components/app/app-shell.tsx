@@ -14,7 +14,7 @@ import {
   Settings,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { LegalLinks } from "@/components/legal/site-footer";
 import { Logo } from "@/components/shared/logo";
@@ -24,6 +24,7 @@ import { usePlan } from "@/hooks/use-plan";
 import { planOverview } from "@/lib/domain/summary";
 import { exitDemo } from "@/lib/client/demo";
 import { cn } from "@/lib/utils";
+import { navigateFresh } from "@/lib/client/navigation";
 
 const NAV = [
   { href: "/dashboard", label: "Today", icon: LayoutDashboard, mobile: true },
@@ -37,7 +38,6 @@ const NAV = [
 ] as const;
 
 export function useSignOut() {
-  const router = useRouter();
   const { mode } = usePlan();
   return async () => {
     if (mode === "demo") {
@@ -46,8 +46,7 @@ export function useSignOut() {
     }
     // Server-side sign-out clears the HttpOnly session cookies.
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined);
-    router.replace("/login?reason=signed-out");
-    router.refresh();
+    navigateFresh("/login?reason=signed-out");
   };
 }
 

@@ -2,7 +2,6 @@
 
 import { Loader2, UsersRound } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearStoredToken, useTokenFromHash } from "@/components/clinic/token-from-hash";
 import { Field } from "@/components/clinic/ui";
@@ -10,11 +9,11 @@ import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch, ClientError } from "@/lib/client/http";
+import { navigateFresh } from "@/lib/client/navigation";
 
 const KEY = "aftercare_staff_invite";
 
 export default function JoinClinicPage() {
-  const router = useRouter();
   const token = useTokenFromHash(KEY);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -63,7 +62,7 @@ export default function JoinClinicPage() {
               try {
                 await apiFetch("/api/clinic/join", { method: "POST", body: JSON.stringify({ token, display_name: name }) });
                 clearStoredToken(KEY);
-                router.replace("/clinic/dashboard");
+                navigateFresh("/clinic/dashboard");
               } catch (err) {
                 setError(err instanceof ClientError ? err.message : "We could not accept the invitation.");
               } finally {

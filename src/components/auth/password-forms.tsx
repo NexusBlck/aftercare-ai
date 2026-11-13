@@ -2,12 +2,12 @@
 
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch, ClientError } from "@/lib/client/http";
+import { navigateFresh } from "@/lib/client/navigation";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -65,7 +65,6 @@ export function ForgotPasswordForm() {
 }
 
 export function NewPasswordForm() {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -81,7 +80,7 @@ export function NewPasswordForm() {
     try {
       await apiFetch("/api/auth/password", { method: "POST", body: JSON.stringify({ password }) });
       await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined);
-      router.replace("/login?reason=password-updated");
+      navigateFresh("/login?reason=password-updated");
     } catch (err) {
       setError(
         err instanceof ClientError && err.code === "unauthorized"

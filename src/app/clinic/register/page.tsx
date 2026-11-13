@@ -2,7 +2,6 @@
 
 import { Building2, CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Field, NativeSelect } from "@/components/clinic/ui";
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { apiFetch, ClientError } from "@/lib/client/http";
+import { navigateFresh } from "@/lib/client/navigation";
 import { CreateOrganizationSchema } from "@/schemas/clinic";
 import { PasswordSchema, EmailSchema } from "@/schemas/auth";
 
@@ -25,7 +25,6 @@ const POINTS = [
 ];
 
 export default function ClinicRegisterPage() {
-  const router = useRouter();
   const [step, setStep] = useState<Step>("loading");
   const [memberOf, setMemberOf] = useState<string | null>(null);
 
@@ -71,7 +70,7 @@ export default function ClinicRegisterPage() {
               <p className="mt-2 text-muted-foreground">We sent you a confirmation link. After confirming, return to this page to create your clinic.</p>
             </div>
           )}
-          {step === "clinic" && <ClinicStep onDone={() => router.replace("/clinic/dashboard")} />}
+          {step === "clinic" && <ClinicStep onDone={() => navigateFresh("/clinic/dashboard")} />}
           {step === "member" && (
             <div>
               <h1 className="text-2xl font-extrabold">You already belong to {memberOf}</h1>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ApiBackend, LocalBackend, type Mode, type PlanBackend } from "@/lib/client/backends";
 import { ClientError } from "@/lib/client/http";
 import type { LocalProfile } from "@/lib/client/local-store";
 import { DEMO_COOKIE } from "@/lib/mode";
+import { navigateFresh } from "@/lib/client/navigation";
 import type { Language, PlanBundle } from "@/schemas/domain";
 
 export interface ServerStatus {
@@ -41,7 +41,6 @@ export function readModeFromCookie(): Mode {
 }
 
 export function PlanProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const [mode] = useState<Mode>(() => readModeFromCookie());
   const backend = useMemo<PlanBackend>(() => (mode === "demo" ? new LocalBackend() : new ApiBackend()), [mode]);
   const [status, setStatus] = useState<PlanContextValue["status"]>("loading");
@@ -60,12 +59,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const handleAuthError = useCallback(
     (err: unknown) => {
       if (err instanceof ClientError && (err.code === "unauthorized" || err.code === "accounts_unconfigured")) {
-        router.replace(`/login?reason=${err.code === "unauthorized" ? "expired" : "unconfigured"}`);
+        navigateFresh(`/login?reason=${err.code === "unauthorized" ? "expired" : "unconfigured"}`);
         return true;
       }
       return false;
     },
-    [router],
+    [],
   );
 
   const load = useCallback(

@@ -2,7 +2,6 @@
 
 import { HeartHandshake, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearStoredToken, useTokenFromHash } from "@/components/clinic/token-from-hash";
 import { Field } from "@/components/clinic/ui";
@@ -10,6 +9,7 @@ import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch, ClientError } from "@/lib/client/http";
+import { navigateFresh } from "@/lib/client/navigation";
 
 const KEY = "aftercare_patient_invite";
 
@@ -18,7 +18,6 @@ const KEY = "aftercare_patient_invite";
  * to the clinic's record. The page reveals nothing about the patient or clinic before verification.
  */
 export default function PatientInvitationPage() {
-  const router = useRouter();
   const token = useTokenFromHash(KEY);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [dob, setDob] = useState("");
@@ -64,7 +63,7 @@ export default function PatientInvitationPage() {
               try {
                 await apiFetch("/api/invitations/redeem", { method: "POST", body: JSON.stringify({ token, date_of_birth: dob }) });
                 clearStoredToken(KEY);
-                router.replace("/care-team");
+                navigateFresh("/care-team");
               } catch (err) {
                 setError(err instanceof ClientError ? err.message : "We could not link your account. Please try again.");
               } finally {

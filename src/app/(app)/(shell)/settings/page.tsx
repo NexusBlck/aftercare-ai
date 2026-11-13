@@ -17,6 +17,7 @@ import { LocalBackend } from "@/lib/client/backends";
 import { exitDemo } from "@/lib/client/demo";
 import { ClientError } from "@/lib/client/http";
 import { cn } from "@/lib/utils";
+import { navigateFresh } from "@/lib/client/navigation";
 import type { Language } from "@/schemas/domain";
 
 function Card({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
@@ -56,8 +57,12 @@ export default function SettingsPage() {
       if (mode === "demo") {
         exitDemo();
       } else {
-        toast.success(res.accountDeleted ? "Your account and all data were deleted." : "All your documents and plan data were deleted.");
-        router.replace("/?deleted=1");
+        if (res.accountDeleted) {
+          navigateFresh("/login?reason=account-deleted");
+        } else {
+          toast.success("All your documents and plan data were deleted.");
+          router.replace("/?deleted=1");
+        }
       }
     } catch (err) {
       toast.error(err instanceof ClientError ? err.message : "Deletion failed. Nothing was changed.");

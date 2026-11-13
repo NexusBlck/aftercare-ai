@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff, FlaskConical, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import "@/schemas/zod-config";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { safeNext } from "@/lib/security/redirect";
 import { apiFetch, ClientError } from "@/lib/client/http";
 import { accountsConfigured } from "@/lib/supabase/browser";
+import { navigateFresh } from "@/lib/client/navigation";
 
 const Schema = z.object({
   email: z.email("Enter a valid email address."),
@@ -25,6 +26,7 @@ const REASONS: Record<string, string> = {
   unconfigured: "Accounts are not configured on this server. You can use the demo instead.",
   "link-invalid": "That link is invalid, expired or has already been used. Please request a new one.",
   "password-updated": "Your password was changed. Please sign in with your new password.",
+  "account-deleted": "Your account and all data were deleted.",
 };
 
 /** Reads ?reason= in its own Suspense boundary so the form itself can be server-rendered. */
@@ -50,7 +52,6 @@ function pendingInvitationPath(): string | null {
 }
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -84,8 +85,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       if (mode === "login") {
         const res = await apiFetch<{ home?: string }>("/api/auth/login", { method: "POST", body: JSON.stringify(parsed.data) });
         const next = new URLSearchParams(window.location.search).get("next");
-        router.replace(next ? safeNext(next, window.location.origin) : (pendingInvitationPath() ?? res.home ?? "/dashboard"));
-        router.refresh();
+        navigateFresh(next ? safeNext(next, window.location.origin) : (pendingInvitationPath() ?? res.home ?? "/dashboard"));
       } else {
         const res = await apiFetch<{ needsConfirmation: boolean }>("/api/auth/signup", {
           method: "POST",
@@ -97,8 +97,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         if (res.needsConfirmation) {
           setInfo("Check your email for a confirmation link. It signs you in and takes you to set-up.");
         } else {
-          router.replace(pendingInvitationPath() ?? "/onboarding");
-          router.refresh();
+          navigateFresh(pendingInvitationPath() ?? "/onboarding");
         }
       }
     } catch (err) {

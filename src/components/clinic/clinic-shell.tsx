@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ROLE_LABELS, type Permission } from "@/lib/clinic/permissions";
 import { cn } from "@/lib/utils";
+import { navigateFresh } from "@/lib/client/navigation";
 import { useClinic } from "./clinic-context";
 import { NotificationsBell } from "./notifications-bell";
 import { send } from "./use-api";
@@ -102,11 +103,9 @@ function OrgSwitcher() {
 }
 
 function useSignOut() {
-  const router = useRouter();
   return async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => undefined);
-    router.replace("/login?reason=signed-out");
-    router.refresh();
+    navigateFresh("/login?reason=signed-out");
   };
 }
 
