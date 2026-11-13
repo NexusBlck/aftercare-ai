@@ -17,7 +17,7 @@ Hosting: Vercel (Next.js) + Supabase (Postgres, Auth, Storage). The current prod
 | `AFTERCARE_AI_PROVIDER=freellmapi` + `FREELLMAPI_BASE_URL`, `FREELLMAPI_API_KEY` | optional | free-tier models through a [FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi) server. The Privacy and Subprocessors pages then disclose free-tier processing automatically (free tiers may train on submitted content) |
 | `FREELLMAPI_MODEL`, `FREELLMAPI_VISION_MODEL`, `FREELLMAPI_TIMEOUT_MS` | no | ordered model preference lists (text / photos), tried in turn; per-attempt timeout (default 90 s) |
 | `MAX_UPLOAD_MB` | no (10) | |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | for welcome emails | invitations are **not** emailed |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | for welcome and invitation emails | without them, invitations still work and the clinic shares the link itself |
 | `SECURITY_LOG_SALT` | recommended | pseudonymisation salt for security logs |
 | `LEGAL_*` / operator details | yes for production | see `src/lib/legal.ts` |
 

@@ -101,10 +101,16 @@ test.describe.serial("clinic portal — live signed-in workflow", () => {
   });
 
   test("2. staff management: invitations are email-bound and single use; roles are enforced", async () => {
-    const clin = await call<{ link: string }>("owner-a", "POST", "/api/clinic/staff", { email: email("clinician-a"), role: "clinician", clinical_reviewer: true });
+    const clin = await call<{ link: string; delivery: string; email_status?: string }>("owner-a", "POST", "/api/clinic/staff", {
+      email: email("clinician-a"),
+      role: "clinician",
+      clinical_reviewer: true,
+    });
     const nurse = await call<{ link: string }>("owner-a", "POST", "/api/clinic/staff", { email: email("nurse-a"), role: "nurse", clinical_reviewer: false });
     expect(clin.status).toBe(201);
     expect(clin.body.link).toMatch(/\/clinic\/join#t=[0-9a-f]{64}$/);
+    // SMTP is off for live tests: the invitation still works and the inviter is told to share the link.
+    expect(clin.body).toMatchObject({ delivery: "manual", email_status: "not_configured" });
 
     expect((await call("outsider", "POST", "/api/clinic/join", { token: tokenOf(clin.body.link) })).status).toBe(403);
     expect((await call("clinician-a", "POST", "/api/clinic/join", { token: tokenOf(clin.body.link), display_name: "Dr Clinician A" })).status).toBe(200);
@@ -231,7 +237,15 @@ test.describe.serial("clinic portal — live signed-in workflow", () => {
     const inv = await call<{ link: string; delivery: string }>("nurse-a", "POST", `/api/clinic/patients/${ids.patientA}/invitations`);
     expect(inv.status).toBe(201);
     expect(inv.body.delivery).toBe("manual");
-    const token = tokenOf(inv.body.link);
+    // Asking for an email: SMTP is off for live tests, so the link is shared manually.
+    const emailed = await call<{ link: string; delivery: string; email_status?: string }>("nurse-a", "POST", `/api/clinic/patients/${ids.patientA}/invitations`, {
+      send_email: true,
+    });
+    expect(emailed.status).toBe(201);
+    expect(emailed.body.delivery).toBe("manual");
+    expect(["not_configured", "no_address"]).toContain(emailed.body.email_status);
+    expect((await call("nurse-a", "POST", `/api/clinic/patients/${ids.patientA}/invitations`, { send_email: "yes" })).status).toBe(400);
+    const token = tokenOf(emailed.body.link);
     expect((await call("patient-a", "POST", "/api/invitations/redeem", { token, date_of_birth: "1980-05-02" })).status).toBe(400);
     expect((await call("patient-a", "POST", "/api/invitations/redeem", { token, date_of_birth: "1980-05-01" })).status).toBe(200);
     expect((await call("outsider", "POST", "/api/invitations/redeem", { token, date_of_birth: "1980-05-01" })).status).toBe(400);

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { deliverySentence, type InvitationResult } from "@/lib/clinic/invitation-copy";
 import { ROLE_LABELS, type ClinicRole } from "@/lib/clinic/permissions";
 import { ClientError } from "@/lib/client/http";
 
@@ -25,7 +26,7 @@ export default function StaffPage() {
   const { can } = useClinic();
   const { data, error, loading, reload } = useApi<Staff>("/api/clinic/staff");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [link, setLink] = useState<string | null>(null);
+  const [invite, setInvite] = useState<{ result: InvitationResult; email: string } | null>(null);
   const [revoke, setRevoke] = useState<Staff["members"][number] | null>(null);
   const manage = can("staff.manage");
 
@@ -141,29 +142,29 @@ export default function StaffPage() {
         <InviteDialog
           assignable={data.assignable}
           onClose={() => setInviteOpen(false)}
-          onCreated={(l) => {
+          onCreated={(result, email) => {
             setInviteOpen(false);
-            setLink(l);
+            setInvite({ result, email });
             void reload();
           }}
         />
       )}
-      <Dialog open={!!link} onOpenChange={(o) => !o && setLink(null)}>
+      <Dialog open={!!invite} onOpenChange={(o) => !o && setInvite(null)}>
         <DialogContent className="w-[calc(100vw-1.5rem)] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Invitation link created</DialogTitle>
+            <DialogTitle>{invite?.result.delivery === "email" ? "Invitation sent" : "Invitation link created"}</DialogTitle>
             <DialogDescription>
-              No email has been sent. Share this link privately with the invited person. They must sign in with the invited email address. It works once, expires in 7 days and is shown only now.
+              {invite && deliverySentence(invite.result, invite.email)} They must sign in with the invited email address. The link works once, expires in 7 days and is shown only now.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2">
-            <Input readOnly value={link ?? ""} aria-label="Invitation link" onFocus={(e) => e.currentTarget.select()} />
-            <Button variant="outline" onClick={async () => { await navigator.clipboard.writeText(link ?? ""); toast.success("Link copied."); }}>
+            <Input readOnly value={invite?.result.link ?? ""} aria-label="Invitation link" onFocus={(e) => e.currentTarget.select()} />
+            <Button variant="outline" onClick={async () => { await navigator.clipboard.writeText(invite?.result.link ?? ""); toast.success("Link copied."); }}>
               <Copy aria-hidden /> Copy
             </Button>
           </div>
           <DialogFooter>
-            <Button onClick={() => setLink(null)}>Done</Button>
+            <Button onClick={() => setInvite(null)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -180,7 +181,7 @@ export default function StaffPage() {
   );
 }
 
-function InviteDialog({ assignable, onClose, onCreated }: { assignable: ClinicRole[]; onClose: () => void; onCreated: (link: string) => void }) {
+function InviteDialog({ assignable, onClose, onCreated }: { assignable: ClinicRole[]; onClose: () => void; onCreated: (result: InvitationResult, email: string) => void }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<ClinicRole>(assignable.includes("nurse") ? "nurse" : assignable[0]);
   const [reviewer, setReviewer] = useState(false);
@@ -224,8 +225,8 @@ function InviteDialog({ assignable, onClose, onCreated }: { assignable: ClinicRo
               setBusy(true);
               setError(null);
               try {
-                const res = await send<{ link: string }>("/api/clinic/staff", "POST", { email, role, clinical_reviewer: reviewer });
-                onCreated(res.link);
+                const res = await send<InvitationResult>("/api/clinic/staff", "POST", { email, role, clinical_reviewer: reviewer });
+                onCreated(res, email);
               } catch (err) {
                 setError(err instanceof ClientError ? err.message : "We could not create the invitation.");
               } finally {
@@ -233,7 +234,7 @@ function InviteDialog({ assignable, onClose, onCreated }: { assignable: ClinicRo
               }
             }}
           >
-            {busy && <Loader2 className="animate-spin" aria-hidden />} Create invitation
+            {busy && <Loader2 className="animate-spin" aria-hidden />} Send invitation
           </Button>
         </DialogFooter>
       </DialogContent>

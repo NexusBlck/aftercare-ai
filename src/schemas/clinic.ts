@@ -135,6 +135,7 @@ export const MemberPatchSchema = z.object({
   clinical_reviewer: z.boolean().optional(),
   status: z.enum(["active", "revoked"]).optional(),
 });
+export const PatientInviteSchema = z.object({ send_email: z.boolean().default(false) });
 export const AcceptStaffInviteSchema = z.object({ token, display_name: optionalText(80) });
 
 export const RedeemPatientInviteSchema = z.object({ token, date_of_birth: isoDate });
